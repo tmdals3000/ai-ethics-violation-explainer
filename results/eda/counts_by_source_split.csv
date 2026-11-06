@@ -1,0 +1,7 @@
+source,split,n,n_violation,violation_rate
+do_not_answer,dev,2256,65,0.0288
+do_not_answer,test,2256,79,0.035
+do_not_answer,train,1122,49,0.0437
+prosocial,dev,20416,14626,0.7164
+prosocial,test,25029,18391,0.7348
+prosocial,train,120236,83088,0.691

@@ -1,0 +1,16 @@
+split,safety_label,human_label,n
+dev,__casual__,0,3213
+dev,__needs_caution__,1,8846
+dev,__needs_intervention__,1,2797
+dev,__possibly_needs_caution__,0,2577
+dev,__probably_needs_caution__,1,2983
+test,__casual__,0,3606
+test,__needs_caution__,1,10753
+test,__needs_intervention__,1,4244
+test,__possibly_needs_caution__,0,3032
+test,__probably_needs_caution__,1,3394
+train,__casual__,0,20690
+train,__needs_caution__,1,50493
+train,__needs_intervention__,1,14605
+train,__possibly_needs_caution__,0,16458
+train,__probably_needs_caution__,1,17990

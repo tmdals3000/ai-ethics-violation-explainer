@@ -1,0 +1,59 @@
+# Baseline 설정. 모든 단계가 이 파일 하나를 읽는다.
+seed: 42
+
+paths:
+  raw_dir: C:/ml/raw            # 원본 데이터 (커밋 안 함)
+  data_dir: C:/ml/aiethics/data # 가공 데이터·캐시 (원문 포함이라 커밋 안 함)
+  hf_home: C:/ml/hf-cache       # HF_HOME. 환경 변수가 있으면 그것을 우선
+  ta_dir: C:/ml/raw/ta          # 조교 파일(similarity/coords/judgments/splits.csv)을 두는 곳
+  results_dir: results          # 저장소 기준 상대 경로
+
+data:
+  sources: [do_not_answer, jigsaw, prosocial]
+  dev_sample_per_source: 50     # 출처별 dev 최대 건수 (처음 50 → 확인 후 200)
+  stratify_sample: true         # 라벨 비율을 유지해 표본 추출
+  split_ratio: {train: 0.2, dev: 0.4, test: 0.4}  # 임시 split (DNA·Jigsaw). train은 예시 후보로만 사용
+  english_min_ascii_ratio: 0.9  # ProsocialDialog '영어만' 필터: 알파벳 중 ASCII 비율
+  prosocial_label_map:          # 안전 라벨 → 위반(1)/정상(0). 데이터 설명서가 오면 교체
+    __casual__: 0
+    __possibly_needs_caution__: 0
+    __probably_needs_caution__: 1
+    __needs_caution__: 1
+    __needs_intervention__: 1
+
+retrieval:
+  encoder: sentence-transformers/all-roberta-large-v1
+  tau: 0.15                     # 중분류를 남기는 유사도 임계값. dev 50건 tau_sweep 에서 top-1 최고(0.42)로 선택
+  tau_levels: [2]               # τ를 적용할 단계 (1=대, 2=중)
+  boundary_delta: 0.02          # τ±δ 에서 top-1이 바뀌면 경계 사례
+  tau_grid: [0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40]
+  embed_with_context: {do_not_answer: true, jigsaw: false, prosocial: false}
+
+judge:
+  top_k_candidates: 5           # base 조건에서 판정할 후보 규칙 수
+  aggregation: max              # base 후보 집계 방식: max | top1
+  default_threshold: 0.5        # 기준 모델 임계값
+  batch_size: 8
+  max_length: 1024
+  qwen_controversial_weight: 1.0  # p = P(Unsafe) + w·P(Controversial). 1.0=strict, 0.0=loose
+  moderation_mode: {do_not_answer: response, jigsaw: prompt, prosocial: prompt}
+  models:
+    llama_guard: {hf_id: meta-llama/Llama-Guard-3-1B, uses_rules: false}
+    qwen3guard: {hf_id: Qwen/Qwen3Guard-Gen-0.6B, uses_rules: false}
+    shieldgemma: {hf_id: google/shieldgemma-2b, uses_rules: true}
+    team: {hf_id: google/shieldgemma-2b, uses_rules: true}
+  team_prompt_versions: [team_v1]  # 확인 후 [team_v1, team_v2, team_v3]
+  team_threshold_grid: [0.05, 0.1, 0.15, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+  examples_per_label: 2         # rule_plus_examples 에서 위반·비위반 예시 수
+
+diagnose:
+  retrieval_top_k: 5            # 정답 규칙이 상위 k 안에 없으면 '규칙 찾기 문제'
+
+effects:
+  model: team
+  alt_thresholds: [0.3, 0.7]
+  alt_taus: [0.10, 0.25]
+  alt_aggregation: top1
+  rule_edit:                    # 규칙 문장 수정 실험 (dev 결과를 보고 정함). null이면 건너뜀
+    node_id: null
+    new_text: null

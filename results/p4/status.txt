@@ -1,0 +1,2 @@
+AUC 하락폭·회복폭: 규칙을 받는 모델(ShieldGemma/팀) 판정이 없어 계산 불가
+effects.model=team 판정 결과 없음 → 임계값 실험만 qwen3guard 로 대신, 우선순위·τ·규칙 문장 수정은 건너뜀

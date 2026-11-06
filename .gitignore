@@ -1,0 +1,12 @@
+# 토큰·원본 데이터·가중치는 커밋하지 않는다
+.env
+kaggle.json
+data/
+*.sqlite
+*.npy
+*.safetensors
+*.bin
+*.pt
+.venv/
+__pycache__/
+.pytest_cache/

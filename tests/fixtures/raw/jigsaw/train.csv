@@ -1,0 +1,7 @@
+row_id,body,rule,subreddit,positive_example_1,positive_example_2,negative_example_1,negative_example_2,rule_violation
+0,fake comment 0,No Advertising: fake rule A,fakesub,pos1-0,pos2-0,neg1-0,neg2-0,True
+1,fake comment 1,No legal advice: fake rule B,fakesub,pos1-1,pos2-1,neg1-1,neg2-1,False
+2,fake comment 2,No Advertising: fake rule A,fakesub,pos1-2,pos2-2,neg1-2,neg2-2,False
+3,fake comment 3,No legal advice: fake rule B,fakesub,pos1-3,pos2-3,neg1-3,neg2-3,True
+4,fake comment 4,No Advertising: fake rule A,fakesub,pos1-4,pos2-4,neg1-4,neg2-4,False
+5,fake comment 5,No legal advice: fake rule B,fakesub,pos1-5,pos2-5,neg1-5,neg2-5,False

@@ -1,0 +1,3 @@
+split,source,model,condition,n,n_pos,n_pred_pos,error_rate,roc_auc,pr_auc,f1,kappa_human,note,pr_auc_note
+dev,do_not_answer,qwen3guard,base,50,1,0,0.02,0.8571,0.125,0.0,0.0,소수 클래스 1건 → 불안정,
+dev,prosocial,qwen3guard,base,50,36,24,0.32,0.8056,0.9247,0.7333,0.3711,,PR-AUC 는 DNA 중심 지표 (참고값)

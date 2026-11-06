@@ -1,0 +1,7 @@
+response_llm,n,n_violation,violation_rate
+ChatGLM2,939,85,0.0905
+ChatGPT,939,14,0.0149
+Claude,939,16,0.017
+GPT4,939,23,0.0245
+llama2-7b-chat,939,3,0.0032
+vicuna-7b,939,52,0.0554
