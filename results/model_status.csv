@@ -1,13 +1,2 @@
-model,status,detail,prompt_version,n_prompts,n_new_forward,seconds,load_plus_run_seconds
-llama_guard,failed,"OSError: You are trying to access a gated repo.
-Make sure to have access to it at https://huggingface.co/meta-llama/Llama-Guard-3-1B.
-401 Client Error. (Request ID: Root=1-6aed887a-26a7ada94dbd63bc6122a859;120c4ea9-7684-4813-8b19-cc0c75d3f5e9)
-
-Cannot access gated repo for url https://huggingface.co/meta-lla",,,,,
-qwen3guard,ok,,official,100.0,100.0,10.4,16.7
-shieldgemma,failed,"OSError: You are trying to access a gated repo.
-Make sure to have access to it at https://huggingface.co/google/shieldgemma-2b.
-401 Client Error. (Request ID: Root=1-6aed888c-624438551ad28a646a2644ed;7f485d3e-540f-478c-bc8c-4129aec33797)
-
-Cannot access gated repo for url https://huggingface.co/google/shieldg",,,,,
-team,failed,ShieldGemma 가중치를 불러오지 못함,,,,,
+model,prompt_version,status,n_prompts,n_new_forward,seconds,load_plus_run_seconds
+qwen3guard,official,ok,2306,0,0.1,12.9

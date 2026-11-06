@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 
 from src import adapters, data
+from src.common import read_csv_safe
 from src.retrieval import Tree, targets
 
 MAX_TEXT_CHARS = 3000  # 너무 긴 텍스트는 글자 수로 자른다 (프롬프트 끝의 질문이 잘리지 않게)
@@ -162,7 +163,8 @@ class HFJudge:
             batch = [prompts[j] for j in order[i:i + bs]]
             enc = self.tok(batch, return_tensors="pt", padding=True, add_special_tokens=self.add_special_tokens).to("cuda")
             with torch.no_grad():
-                logits = self.model(**enc).logits[:, -1, :]
+                # 마지막 위치 logit 만 계산 (전체 위치 × 어휘 크기는 GPU 메모리를 넘음)
+                logits = self.model(**enc, logits_to_keep=1).logits[:, -1, :]
             pr = torch.softmax(logits[:, self.label_ids].float(), dim=-1).cpu().numpy()
             out += list(self.to_p(pr))
         res = np.empty(len(prompts))
@@ -414,8 +416,8 @@ def finalize(cfg, rows, ta, texts):
     j = pd.concat(rows, ignore_index=True)
     # 이전에 계산한 다른 모델 결과는 유지 (일부 모델만 다시 돌릴 때)
     old_p = cfg["_res"] / "judgments.csv"
-    if old_p.exists():
-        old = pd.read_csv(old_p, keep_default_na=False)
+    old = read_csv_safe(old_p, keep_default_na=False)
+    if len(old):
         old = old[~old.set_index(["model", "prompt_version"]).index.isin(j.set_index(["model", "prompt_version"]).index.unique())]
         old = old[~old.candidate_rule_id.astype(str).str.startswith("AGG:")]
         j = pd.concat([old[j.columns], j], ignore_index=True)
@@ -446,8 +448,8 @@ def log_experiments(cfg, j, texts, exp):
             rows.append({"timestamp": time.strftime("%Y-%m-%d %H:%M:%S"), "prompt_version": pv, "threshold": th,
                          "split": "dev", "source": src, "condition": cond,
                          "n_dev_per_source": cfg["data"]["dev_sample_per_source"]} | binary_metrics(g))
+    if not rows:  # 팀 판정기 결과가 없으면 기록할 것이 없다 (빈 파일을 만들지 않음)
+        return
     p = cfg["_res"] / "experiments.csv"
-    new = pd.DataFrame(rows)
-    if p.exists():
-        new = pd.concat([pd.read_csv(p), new], ignore_index=True)
+    new = pd.concat([read_csv_safe(p), pd.DataFrame(rows)], ignore_index=True)
     new.to_csv(p, index=False)

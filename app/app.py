@@ -11,7 +11,7 @@ import streamlit as st
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from src import adapters, data, diagnose, effects, retrieval  # noqa: E402
-from src.common import load_config  # noqa: E402
+from src.common import load_config, read_csv_safe  # noqa: E402
 from src.metrics import MODELS, binary_metrics, load_joined  # noqa: E402
 
 st.set_page_config(page_title="AI 윤리 판정 설명", layout="wide")
@@ -19,12 +19,7 @@ cfg = load_config()
 RES = cfg["_res"]
 
 
-def csv(path, **kw):
-    """결과 파일이 없거나 비어 있으면 빈 표."""
-    try:
-        return pd.read_csv(path, **kw)
-    except (FileNotFoundError, pd.errors.EmptyDataError):
-        return pd.DataFrame()
+csv = read_csv_safe
 
 
 @st.cache_data
@@ -208,6 +203,9 @@ with t3:
         d = d[d.model == f_model] if f_model in set(d.model) else d
         cnt = d.cause.value_counts().reindex(diagnose.CAUSES, fill_value=0).rename("n").reset_index()
         st.caption(f"모델 {f_model} · 잘못된 판정 {len(d)}건 · unclassified {int((d.cause == 'unclassified').sum())}건")
+        if len(d) and (~d.rule2_applicable).any():
+            st.warning(f"결과가 빠진 판정 모델이 있어 {int((~d.rule2_applicable).sum())}건은 '라벨 확인 필요'를 적용하지 않았습니다 "
+                       f"(빠진 모델: {', '.join(sorted({x for v in d.missing_models for x in v.split('|') if x}))}).")
         st.altair_chart(alt.Chart(cnt).mark_bar().encode(x="n", y=alt.Y("cause", sort=diagnose.CAUSES)), width="stretch")
         focus = st.selectbox("강조할 원인", ["(전체)"] + diagnose.CAUSES)
         if coords is not None:
@@ -236,7 +234,7 @@ with t3:
             st.dataframe(M[M.text_id == SEL].pivot_table(index="model", columns="condition", values="p_violation").round(3))
             dd = d[d.text_id == SEL]
             if len(dd):
-                st.dataframe(dd[["model", "cause", "decided_by"]], hide_index=True)
+                st.dataframe(dd[["model", "cause", "decided_by", "missing_models"]], hide_index=True)
 
 # ---------- P4 ----------
 with t4:

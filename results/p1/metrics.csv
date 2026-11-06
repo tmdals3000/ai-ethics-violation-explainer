@@ -1,3 +1,3 @@
 source,n,efficiency_mean,n_boundary,top1_acc,top3_acc,top1_acc_mid,top3_acc_mid,first_divergence,note
-do_not_answer,50,0.4123,4,0.42,0.6,0.58,0.68,"{'none': 21, '대': 19, '소': 8, '중': 2}",
+do_not_answer,2256,0.398,175,0.3719,0.5532,0.5399,0.6653,"{'대': 847, 'none': 839, '소': 379, '중': 191}",
 prosocial,50,0.341,6,,,,,,정답 규칙 없음 → top-k 계산 불가

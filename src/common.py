@@ -29,6 +29,15 @@ def load_config(path=None):
     return cfg
 
 
+def read_csv_safe(path, **kw):
+    """결과 파일이 없거나 비어 있으면(결과 0행) 빈 표를 돌려준다."""
+    import pandas as pd
+    try:
+        return pd.read_csv(path, **kw)
+    except (FileNotFoundError, pd.errors.EmptyDataError):
+        return pd.DataFrame()
+
+
 def check_disk(min_gb=15, path="C:/"):
     """남은 디스크가 min_gb 미만이면 멈춘다 (사용자 요청)."""
     free = shutil.disk_usage(path).free / 1e9

@@ -138,13 +138,16 @@ def apply_splits(cfg, df):
     return df
 
 
-def dev_sample(df, n, stratify, seed):
-    """출처별 dev 최대 n건. 라벨 비율 유지."""
+def dev_sample(df, n_by_source, stratify, seed, split="dev"):
+    """출처별 최대 n건 (n='all' 이면 전체). 라벨 비율 유지."""
     out = []
-    for src, g in df[df["split"] == "dev"].groupby("source"):
-        if len(g) <= n:
+    for src, g in df[df["split"] == split].groupby("source"):
+        n = n_by_source.get(src, 50) if isinstance(n_by_source, dict) else n_by_source
+        if n == "all" or len(g) <= int(n):
             out.append(g)
-        elif stratify and g["human_label"].nunique() > 1:
+            continue
+        n = int(n)
+        if stratify and g["human_label"].nunique() > 1:
             frac = n / len(g)
             s = pd.concat([x.sample(max(1, round(len(x) * frac)), random_state=seed)
                            for _, x in g.groupby("human_label")])

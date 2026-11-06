@@ -31,25 +31,28 @@ def diagnose(m, per, top_k):
         t, mo, y = r.text_id, r.model, human[r.text_id]
         cause, by = "unclassified", "no rule matched"
         base_all = [pred.get((t, x, "base")) for x in MODELS]
+        missing = [x for x, p in zip(MODELS, base_all) if p is None]
         ro_rule = [ro(t, x) for x in RULE_MODELS]
         gr = gold_rank.get(t, -1)
         if mo in RULE_MODELS and (gr < 1 or gr > top_k):
             cause, by = "retrieval", f"1: 정답 규칙 순위 {gr if gr > 0 else '없음'} > top-{top_k} (base 후보)"
         elif mo in RULE_MODELS and ro(t, mo) == y:
             cause, by = "retrieval", "1: base 틀림·rule_only 맞음 → 다른 후보 규칙이 판정을 바꿈"
-        elif None not in base_all and len(set(base_all)) == 1:
+        elif not missing and len(set(base_all)) == 1:  # 4개 모델 결과가 모두 있을 때만
             cause, by = "label_check", "2: base 에서 4개 모델 모두 같은 답, 사람 라벨만 다름"
         elif None not in ro_rule and all(p != y for p in ro_rule):
             cause, by = "rule_text", "3: rule_only 에서 ShieldGemma·팀 판정기 모두 틀림"
         elif ro(t, mo) is not None and ro(t, mo) != y and any(ro(t, x) == y for x in models if x != mo):
             cause, by = "judge_model", "4: rule_only 에서 일부 모델만 틀림"
-        elif None in base_all or None in ro_rule:
-            by = "판정 결과가 없는 모델이 있어 규칙 2·3 적용 불가"
+        elif missing or None in ro_rule:
+            by = f"판정 결과가 없는 모델({', '.join(missing) or 'rule_only'})이 있어 규칙 2·3 적용 불가"
         rows.append({"text_id": t, "model": mo, "source": r.source, "gold_rule_id": r.gold_rule_id,
                      "rule_group": r.rule_group, "human_label": y, "prediction": r.prediction,
-                     "gold_rank": gr, "cause": cause, "decided_by": by})
+                     "gold_rank": gr, "cause": cause, "decided_by": by,
+                     "missing_models": "|".join(missing), "rule2_applicable": not missing})
     return pd.DataFrame(rows, columns=["text_id", "model", "source", "gold_rule_id", "rule_group", "human_label",
-                                       "prediction", "gold_rank", "cause", "decided_by"])
+                                       "prediction", "gold_rank", "cause", "decided_by", "missing_models",
+                                       "rule2_applicable"])
 
 
 def summary(d):
@@ -71,3 +74,6 @@ def run(cfg):
     s.to_csv(out / "cause_summary.csv", index=False)
     print(s.to_string() if len(s) else "잘못된 판정 없음 (정답 규칙이 있는 출처 기준)")
     print("unclassified:", int((d.cause == "unclassified").sum()), "건")
+    if len(d) and (~d.rule2_applicable).any():
+        miss = sorted({x for v in d.missing_models for x in v.split("|") if x})
+        print(f"[p3] ⚠ 결과가 빠진 모델 {miss} → {int((~d.rule2_applicable).sum())}건은 '라벨 확인 필요' 적용 불가")

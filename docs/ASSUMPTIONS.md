@@ -14,7 +14,7 @@
 | A-sim | similarity | 조교 파일 없음 → all-roberta-large-v1 코사인 유사도. 노드 쪽은 `rule_text`, 텍스트 쪽은 DNA 만 `질문 + 응답` (응답 대부분이 거절문이라 응답만으로는 주제를 알기 어려움) | `retrieval.embed_with_context` |
 | A-coords | coords | 조교 파일 없음 → 텍스트 임베딩 PCA 2차원 | `src/retrieval.py` |
 | A-bfs | BFS | 대분류는 모두 비교, 중분류만 τ 이상 유지(모두 τ 미만이면 최고 1개 유지), 유지한 중분류의 소분류를 모두 비교. 후보 = 도달한 잎을 유사도 순으로. 효율 = 비교한 노드 수 / 전체 노드 수(78) | `retrieval.tau`, `tau_levels` |
-| A-tau | τ | dev 50건 τ 탐색(`results/p1/tau_sweep.csv`)에서 DNA top-1 최고인 0.15 | `retrieval.tau` |
+| A-tau | τ | **현재 설정 0.15 (잠정).** 아래 'τ 결정 기록' 참고. dev τ별 비교표: `results/p1/tau_comparison.csv` | `retrieval.tau`, `tau_grid` |
 | A-boundary | 경계 사례 | τ−0.02 또는 τ+0.02 에서 top-1 규칙이 바뀌는 텍스트 | `retrieval.boundary_delta` |
 | A-excluded | 규칙 제외 조건 | PDF 에 따라 DNA 위해 유형 12개, Jigsaw 규칙 2개. 각 텍스트에서 **자기 정답 위해 유형(중분류) 전체**를 트리에서 빼고 BFS → 상위 5개 후보로 판정 | `retrieval.excluded_for` |
 | A-agg | base 집계 | 상위 5개 후보마다 판정 → 위반 확률 최댓값. 후보별 행은 `judgments.csv` 에, 집계 행은 `candidate_rule_id=AGG:max` | `judge.aggregation` |
@@ -25,6 +25,24 @@
 | A-examples | 규칙+예시 조건 | Jigsaw: 그 행에 딸린 위반 2·비위반 2. DNA: train split 응답 중 같은 소분류(위반 예시가 없으면 같은 중분류) 위반·비위반 최대 2개씩 | `judge.examples_per_label` |
 | A-threshold | 임계값 | 기준 모델 0.5 고정. 팀 판정기는 dev 에서 출처별 F1 평균이 최대인 값(grid) | `judge.team_threshold_grid` |
 | A-team | 팀 판정기 | 조교 ShieldGemma 코드가 없어 직접 작성. ShieldGemma-2B 가중치 그대로(학습 없음), 프롬프트만 바꿈(맥락 포함·대상 텍스트만 평가). 로컬 RTX 3060 실행(PDF 는 Spark) | `src/judges.py:TEAM_PROMPTS` |
+| A-p3-missing | P3 결과 누락 | 판정 결과가 없는 모델이 있으면 '라벨 확인 필요'(규칙 2)를 적용하지 않고 `missing_models`, `rule2_applicable=False` 로 표시. 현재 Qwen3Guard 만 있어 DNA 잘못된 판정 87건이 모두 `unclassified` | `src/diagnose.py` |
+| A-batch | 수치 오차 | bf16 + 왼쪽 패딩이라 같은 프롬프트도 배치 구성에 따라 p_violation 이 최대 약 0.03 달라질 수 있음(Qwen3Guard 64건 실측 최대 0.028). 캐시가 첫 계산값을 고정하므로 재실행 결과는 같다 | `judge.batch_size` |
 | A-p3 | P3 원인 | 규칙 1 은 규칙을 받는 모델(ShieldGemma·팀)에만 적용. 규칙을 받지 않는 모델의 'rule_only 답' = base 답. 규칙 2 는 4개 모델 결과가 모두 있을 때만, 규칙 3 은 ShieldGemma·팀 결과가 모두 있을 때만 적용(없으면 `unclassified` + 이유) | `src/diagnose.py` |
 | A-priority | 우선순위 | '우선순위 변경' = 후보 집계를 max → top1(유사도 1위 후보만)로 바꾸는 것 | `effects.alt_aggregation` |
-| A-sample | dev 표본 | 출처별 최대 50건, 라벨 비율 유지. DNA dev 위반 비율 2.9% → 50건 중 위반 1건이라 DNA 지표는 매우 불안정 | `data.dev_sample_per_source` |
+| A-sample | dev 표본 | **DNA 는 dev 전체(2,256건, 위반 65건 2.9%)**, Jigsaw·ProsocialDialog 는 50건(라벨 비율 유지 층화). 위반 우선 추출은 하지 않음 — 치우친 표본은 PR-AUC·F1 을 실제와 다르게 만든다 | `data.dev_sample_per_source` |
+
+## τ 결정 기록
+
+1. **처음 (2026-11-06, dev 50건 표본):** DNA dev 50건으로 τ = 0.10–0.40 을 비교 → top-1 이 가장 높은 τ = 0.15 (top-1 0.42, top-3 0.60) 를 골라 설정에 넣음. 표본이 50건이라 근거가 약했다.
+2. **DNA dev 전체(2,256건)로 다시 계산:** `results/p1/tau_comparison.csv`
+
+   | τ | top-1 | top-3 | top-1(중분류) | 효율(비교 노드 비율) | 경계 사례 |
+   |---|---|---|---|---|---|
+   | 0.10 | 0.388 | 0.598 | 0.560 | 0.506 | 182 |
+   | **0.15 (현재)** | 0.372 | 0.553 | 0.540 | 0.398 | 175 |
+   | 0.20 | 0.353 | 0.506 | 0.518 | 0.334 | 155 |
+   | 0.25 | 0.351 | 0.485 | 0.514 | 0.304 | 103 |
+   | 0.30 | 0.337 | 0.468 | 0.497 | 0.293 | 70 |
+
+   top-1 은 τ 가 낮을수록 계속 올라간다(τ 가 낮으면 가지를 덜 잘라 더 많은 노드를 비교하므로). 그래서 'top-1 최대' 규칙만 쓰면 격자의 끝(0.10)이 뽑히고, 격자를 넓히면 가지치기를 안 하는 τ = 0 쪽으로 간다. 코드의 선택 규칙(`retrieval.tau_comparison`: top-1 최대, 같으면 효율 값이 작은 쪽)은 0.10 을 고른다.
+3. **결정 대기:** 정확도와 효율 사이의 기준(예: 효율 ≤ 0.4 안에서 top-1 최대 → 0.15)을 정해야 한다. 정할 때까지 0.15 유지.

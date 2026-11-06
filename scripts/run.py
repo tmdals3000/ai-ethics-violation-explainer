@@ -51,13 +51,15 @@ def main():
         timings.append((step, round(time.time() - t0, 1)))
         print(f"[time] {step}: {timings[-1][1]} s")
     check_disk()
+    n = cfg["data"]["dev_sample_per_source"]
+    n_desc = ";".join(f"{k}={v}" for k, v in n.items()) if isinstance(n, dict) else n
     log = cfg["_res"] / "timings.csv"
     new = not log.exists()
     with open(log, "a", encoding="utf-8") as f:
         if new:
             f.write("timestamp,step,seconds,dev_sample_per_source\n")
         for s, sec in timings:
-            f.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')},{s},{sec},{cfg['data']['dev_sample_per_source']}\n")
+            f.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')},{s},{sec},{n_desc}\n")
 
 
 if __name__ == "__main__":

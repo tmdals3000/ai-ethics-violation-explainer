@@ -10,8 +10,11 @@ paths:
 
 data:
   sources: [do_not_answer, jigsaw, prosocial]
-  dev_sample_per_source: 50     # 출처별 dev 최대 건수 (처음 50 → 확인 후 200)
-  stratify_sample: true         # 라벨 비율을 유지해 표본 추출
+  dev_sample_per_source:        # 출처별 dev 최대 건수. all = dev 전체
+    do_not_answer: all          # 위반이 드물어(2.9%) 표본을 줄이면 PR-AUC·F1 이 불안정 → 전체. 위반 우선 추출은 하지 않음
+    jigsaw: 50
+    prosocial: 50
+  stratify_sample: true         # 라벨 비율을 유지해 표본 추출 (치우친 추출 없음)
   split_ratio: {train: 0.2, dev: 0.4, test: 0.4}  # 임시 split (DNA·Jigsaw). train은 예시 후보로만 사용
   english_min_ascii_ratio: 0.9  # ProsocialDialog '영어만' 필터: 알파벳 중 ASCII 비율
   prosocial_label_map:          # 안전 라벨 → 위반(1)/정상(0). 데이터 설명서가 오면 교체

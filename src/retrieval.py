@@ -163,8 +163,7 @@ def wide(sim):
 def targets(cfg, texts, sample):
     t = texts[texts.text_id.isin(sample.text_id)]
     if cfg.get("_allow_test"):
-        n = cfg["data"]["dev_sample_per_source"]
-        test = texts[texts.split == "test"].groupby("source", group_keys=False).sample(n=n, random_state=cfg["seed"])
+        test = data.dev_sample(texts, cfg["data"]["dev_sample_per_source"], cfg["data"]["stratify_sample"], cfg["seed"], split="test")
         t = pd.concat([t, test])
     return t.reset_index(drop=True)
 
@@ -191,12 +190,33 @@ def run(cfg):
     per.to_csv(out / "retrieval_per_text.csv", index=False)
     s = summarize(per)
     s.to_csv(out / "metrics.csv", index=False)
-    sweep = pd.concat([summarize(retrieve_all(cfg, tgt, tree, sw, t)).assign(tau=t) for t in cfg["retrieval"]["tau_grid"]])
+    dev = tgt[tgt.split == "dev"]  # τ 는 dev 에서만 정한다
+    sweep = pd.concat([summarize(retrieve_all(cfg, dev, tree, sw, t)).assign(tau=t) for t in cfg["retrieval"]["tau_grid"]])
     sweep.to_csv(out / "tau_sweep.csv", index=False)
+    comp, best = tau_comparison(sweep, cfg["retrieval"]["tau"])
+    comp.to_csv(out / "tau_comparison.csv", index=False)
     per[per.boundary].to_csv(out / "boundary_cases.csv", index=False)
     g = per[per.get("gold_rule_id", "").fillna("") != ""] if "gold_rule_id" in per else per.iloc[:0]
     if len(g):
         g.groupby("gold_rule_id").agg(n=("text_id", "size"), top1_acc=("hit1", "mean"), top3_acc=("hit3", "mean")) \
             .round(4).reset_index().to_csv(out / "node_accuracy.csv", index=False)
     print(s.to_string())
-    print("τ sweep:\n", sweep[[c for c in ["source", "tau", "top1_acc", "top3_acc", "efficiency_mean"] if c in sweep]].to_string())
+    print("τ 비교 (dev):\n", comp.to_string(index=False))
+    if best is not None and abs(best - cfg["retrieval"]["tau"]) > 1e-9:
+        print(f"[p1] ⚠ dev 선택 규칙의 τ = {best} 가 설정값 {cfg['retrieval']['tau']} 과 다릅니다. configs 를 확인하세요.")
+
+
+def tau_comparison(sweep, tau_cfg):
+    """τ별 dev top-1·top-3·효율 비교표. 선택 규칙: 정답 규칙이 있는 출처의 top-1 평균 최대,
+    같으면 효율 값(비교한 노드 비율)이 작은 τ."""
+    cols = [c for c in ["source", "tau", "n", "top1_acc", "top3_acc", "top1_acc_mid", "top3_acc_mid",
+                        "efficiency_mean", "n_boundary"] if c in sweep]
+    comp = sweep[cols].sort_values(["source", "tau"]).reset_index(drop=True)
+    g = comp.dropna(subset=["top1_acc"]) if "top1_acc" in comp else comp.iloc[:0]
+    best = None
+    if len(g):
+        score = g.groupby("tau").agg(top1=("top1_acc", "mean"), eff=("efficiency_mean", "mean")).reset_index()
+        best = float(score.sort_values(["top1", "eff"], ascending=[False, True]).iloc[0].tau)
+    comp["dev_selected"] = comp.tau == best
+    comp["config_tau"] = comp.tau == tau_cfg
+    return comp, best
