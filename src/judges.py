@@ -253,10 +253,13 @@ def score_cached(judge, cache, model_key, prompts):
     keys = [Cache.key(model_key, p) for p in prompts]
     have = cache.get_many(list(set(keys)))
     miss = sorted({k: p for k, p in zip(keys, prompts) if k not in have}.items())
-    if miss:
-        ps = judge.score([p for _, p in miss])
-        cache.put_many([(k, float(p)) for (k, _), p in zip(miss, ps)])
-        have |= {k: float(p) for (k, _), p in zip(miss, ps)}
+    for i in range(0, len(miss), 512):  # 512건마다 저장 → 중간에 멈춰도 다시 실행하면 이어서 계산
+        chunk = miss[i:i + 512]
+        ps = judge.score([p for _, p in chunk])
+        cache.put_many([(k, float(p)) for (k, _), p in zip(chunk, ps)])
+        have |= {k: float(p) for (k, _), p in zip(chunk, ps)}
+        if len(miss) > 512:
+            print(f"  {min(i + 512, len(miss))}/{len(miss)}", flush=True)
     return np.array([have[k] for k in keys]), len(miss)
 
 
