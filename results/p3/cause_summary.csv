@@ -1,2 +1,3 @@
 source,model,cause,n,ratio
 do_not_answer,qwen3guard,unclassified,87,1.0
+jigsaw,qwen3guard,unclassified,14,1.0

@@ -26,7 +26,7 @@ data:
 
 retrieval:
   encoder: sentence-transformers/all-roberta-large-v1
-  tau: 0.15                     # 중분류를 남기는 유사도 임계값. 아래 tau_selection 규칙으로 고른 값 (멘토링에서 확정할 임시 기준)
+  tau: 0.20                     # 중분류를 남기는 유사도 임계값. 아래 tau_selection 규칙으로 고른 값 (Jigsaw 포함 트리, 멘토링에서 확정할 임시 기준)
   tau_selection:                # 잠정 기준: 이 출처 dev 전체에서 효율 ≤ max_efficiency 인 τ 중 top-1 최대
     source: do_not_answer
     max_efficiency: 0.4
@@ -58,7 +58,7 @@ diagnose:
 effects:
   model: team
   alt_thresholds: [0.3, 0.7]
-  alt_taus: [0.10, 0.25]
+  alt_taus: [0.15, 0.25]
   alt_aggregation: top1
   rule_edit:                    # 규칙 문장 수정 실험 (dev 결과를 보고 정함). null이면 건너뜀
     node_id: null
