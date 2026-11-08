@@ -1,27 +1,40 @@
-# ai-ethics-violation-explainer
+# Baseline 정리: 텍스트 AI 윤리 규칙 위반 판정 모델을 설명하는 시스템
 
-텍스트(챗봇 답변·댓글)의 AI 윤리 규칙 위반 판정이 틀렸을 때, **규칙 찾기 · 규칙 문장 · 판정 모델 · 사람 라벨** 중 어디가 문제인지 밝히고, 규칙을 고치면 판정이 얼마나 나아지는지 확인하는 시스템 (Project 4 Baseline).
+Project 4 · Baseline v0 (`baseline-v0`, 2026-11-08)
+판정이 틀렸을 때 **규칙 찾기 · 규칙 문장 · 판정 모델 · 사람 라벨** 중 어디가 문제인지 밝히고, 고치면 얼마나 나아지는지 확인한다
 
-흐름: 데이터 준비 → P1 규칙 찾기 → P2 판정 비교 → P3 오류 진단 → P4 수정 효과 → Streamlit 화면
+> 이 문서는 Baseline 을 **연구계획서 형식으로 한 곳에 정리한 것**입니다. 무엇을 문제로 잡았고,
+> 무엇을 비교했고, 무엇을 근거로 정했는지가 중심입니다. 단계별 상세는 아래 표의 문서에 있습니다.
+>
+> | | 단계 | 코드 | 상태 | 기록 |
+> |---|---|---|---|---|
+> | P0 | 데이터 준비 | [`src/data.py`](src/data.py) | ✅ | [ASSUMPTIONS](docs/ASSUMPTIONS.md) (A-split, A-pd-label …) |
+> | P1 | 규칙 찾기 | [`src/retrieval.py`](src/retrieval.py) | ✅ | [ASSUMPTIONS · τ 결정 기록](docs/ASSUMPTIONS.md#τ-결정-기록) |
+> | P2 | 판정 비교 | [`src/judges.py`](src/judges.py) · [`src/metrics.py`](src/metrics.py) | ✅ 4개 모델 | [BASELINE_REPORT §2](docs/BASELINE_REPORT.md#2-dev-결과) |
+> | P3 | 오류 진단 | [`src/diagnose.py`](src/diagnose.py) | ✅ | [BASELINE_REPORT §2](docs/BASELINE_REPORT.md#p3-원인별-잘못된-판정-base) |
+> | P4 | 수정 효과 | [`src/effects.py`](src/effects.py) | ⏸ 코드만, 4개 모델로 미실행 | [BASELINE_REPORT §6](docs/BASELINE_REPORT.md#6-다음-할-일) |
+> | 화면 | Streamlit | [`app/app.py`](app/app.py) | ✅ 탭 4개 | — |
+>
+> ⚠ **모든 수치는 dev 결과입니다. test 는 아직 보지 않았습니다.** 검증 상태: `IS만`.
+> split·유사도·좌표는 조교 파일이 없어 **임시**로 만들었습니다.
 
-- 모델 가중치는 학습하지 않는다 (실행 + 팀 판정기 프롬프트·임계값만 개발).
-- 임계값·프롬프트는 dev 에서만 정한다. test 지표는 `--allow-test` 를 줄 때만 계산한다.
-- 임시로 정한 내용: [docs/ASSUMPTIONS.md](docs/ASSUMPTIONS.md) · 결과 요약: [docs/BASELINE_REPORT.md](docs/BASELINE_REPORT.md)
+---
 
-## 폴더
+## 저장소 지도 · 바로 실행하기
 
-| 폴더 | 내용 |
+> 1장부터는 연구 정리입니다. 코드를 보러 왔다면 이 절부터 읽으면 됩니다.
+
+| 폴더 | 무엇 |
 |---|---|
-| `configs/baseline.yaml` | 모든 설정 (경로, 표본 크기, τ, 임계값, 모델) |
-| `src/` | `data` 데이터 준비 · `retrieval` P1 · `judges` 판정 · `metrics` P2 · `diagnose` P3 · `effects` P4 · `adapters` 조교 파일 읽기 |
-| `scripts/run.py` | 전체 실행기 |
-| `app/app.py` | Streamlit 화면 |
-| `tests/` | pytest. 가짜 데이터는 `tests/fixtures` 에만 |
-| `results/` | 지표·판정 결과 (원문 없음, text_id 만) |
+| `configs/baseline.yaml` | 모든 설정 한 곳 — 경로, 표본 크기, τ, 임계값, 모델, 집계 방식. 모든 단계가 이 파일 하나를 읽는다 |
+| `src/` | `data` 데이터 준비 · `retrieval` P1 · `judges` 판정 · `metrics` P2 · `diagnose` P3 · `effects` P4 · `adapters` 조교 파일 읽기 · `common` 공통 |
+| `scripts/` | `run.py` 전체 실행기 · `record_run.py` 실험 결과 기록·README 표 생성 · `trial_analysis.py` 시험 실행 분석 |
+| `app/app.py` | Streamlit 화면 4탭. 유해 원문은 기본으로 가리고 눌렀을 때만 보인다 |
+| `results/` | 지표·판정 결과 (**원문 없음**, `text_id` 만). 실험 원장은 `results/experiments.csv` |
+| `docs/` | [`ASSUMPTIONS.md`](docs/ASSUMPTIONS.md) 임시 결정 · [`BASELINE_REPORT.md`](docs/BASELINE_REPORT.md) 결과 보고서 |
+| `tests/` | pytest 17개. 가짜 데이터는 `tests/fixtures` 에만 |
 
-원본 데이터·가공 데이터·캐시는 저장소 밖(`C:/ml/...`)에 두며 커밋하지 않는다.
-
-## 재현
+원본 데이터·가공 데이터·모델 캐시는 저장소 밖(`C:/ml/...`)에 두며 커밋하지 않는다.
 
 ```bash
 # 1) 환경 (OneDrive 밖에 venv)
@@ -50,11 +63,163 @@ $PY scripts/run.py --steps judge --models team   # 일부 모델만 다시
 C:/ml/aiethics/.venv/Scripts/streamlit run app/app.py
 ```
 
-조교 파일(`similarity.csv`, `coords.csv`, `judgments.csv`, `splits.csv`)이 오면 `C:/ml/raw/ta/` 에 두면 자동으로 우선 사용한다 (`src/adapters.py`).
+조교 파일(`similarity.csv`, `coords.csv`, `judgments.csv`, `splits.csv`)이 오면 `C:/ml/raw/ta/` 에 두면 자동으로 우선 사용한다 ([`src/adapters.py`](src/adapters.py)).
 
-## 실험 결과
+---
 
-### 기록 규칙
+## 1. Problem Definition
+
+### 어떤 task인가
+
+챗봇 답변·커뮤니티 댓글 같은 텍스트가 AI 윤리 규칙을 어겼는지 판정하는 모델은 많지만,
+**판정이 틀렸을 때 왜 틀렸는지**는 알려 주지 않습니다. 이 과제는 판정 결과를 설명하는
+시스템을 만드는 것입니다 — 틀린 판정 하나를 받아서 그 원인을 네 곳 중 하나로 짚습니다.
+
+| 원인 | 뜻 | 고치는 곳 |
+|---|---|---|
+| **규칙 찾기** | 텍스트에 맞는 규칙을 찾지 못했다 | 검색(P1) |
+| **라벨 확인** | 모든 모델이 같은 답인데 사람 라벨만 다르다 | 사람 라벨 재검토 |
+| **규칙 문장** | 맞는 규칙을 줘도 규칙을 받는 모델이 모두 틀린다 | 규칙 문장 수정 |
+| **판정 모델** | 같은 규칙으로 다른 모델은 맞고 이 모델만 틀린다 | 모델·프롬프트·임계값 |
+
+### Baseline 의 목표
+
+**정확도가 아니라 흐름이 끝까지 도는 것**이 목표입니다. 데이터 준비 → P1 → P2 → P3 → P4 →
+화면이 한 번에 실행되고, 각 단계가 다음 단계에 넘길 표를 만드는지 확인합니다.
+
+### 지키는 제약
+
+- 모델 가중치는 **학습·미세조정하지 않는다** — 실행과 팀 판정기의 프롬프트·임계값만 개발한다.
+- XAI, LLM 설명문, 별도 규칙 엔진은 만들지 않는다.
+- 임계값·프롬프트·τ 는 **dev 에서만** 정한다. test 지표는 `--allow-test` 를 줄 때만 계산한다.
+- 데이터나 결과를 지어내지 않는다. 실행하지 못한 모델·데이터는 실패와 원인을 기록한다.
+
+---
+
+## 2. Background & Baseline
+
+### 2.1 대상 데이터
+
+| 출처 | 규모 | 판정 대상 | 비고 |
+|---|---|---|---|
+| **Do-Not-Answer (DNA)** | 5,634행 | 응답 (`response` 모드) | 질문 939개 × 응답 LLM 6개를 한 행씩 펼침. 위반 2.9% |
+| **Jigsaw ACRC** | 2,029행 | 댓글 (`prompt` 모드) | 행마다 붙은 예시 8,116개를 분리 |
+| **ProsocialDialog (PD)** | 165,681행 | 발화 (`prompt` 모드) | 영어만. 안전 라벨 → 위반/정상 변환은 config |
+
+**dev 표본:** DNA dev 전체 2,256건(위반 65), Jigsaw 50건, PD 50건(라벨 비율 유지).
+DNA 는 위반이 드물어 표본을 줄이면 PR-AUC·F1 이 불안정해서 전체를 씁니다.
+
+### 2.2 규칙 트리
+
+| 단계 | DNA | Jigsaw |
+|---|---|---|
+| 대분류 | risk area 5개 | `J` 1개 |
+| 중분류 | harm type 12개 | 규칙 J1(광고 금지) · J2(법률 조언 금지) |
+| 소분류 | specific harm 61개 | — |
+
+총 81노드. 두 출처를 **한 트리**에 넣었고, 이것이 아래 알려진 문제 1번이 됩니다.
+
+### 2.3 Baseline 모델
+
+| 역할 | 모델 | 규칙을 받는가 |
+|---|---|---|
+| 규칙 검색 | `sentence-transformers/all-roberta-large-v1` | — |
+| 기준 판정기 | `meta-llama/Llama-Guard-3-1B` | ✗ (자체 분류 체계) |
+| 기준 판정기 | `Qwen/Qwen3Guard-Gen-0.6B` | ✗ |
+| 기준 판정기 | `google/shieldgemma-2b` | ✓ |
+| **팀 판정기** | ShieldGemma-2B 가중치 + 팀 프롬프트 `team_v1` | ✓ |
+
+### 2.4 조교 파일이 없어 임시로 정한 것
+
+| 무엇 | 임시 결정 | 기록 |
+|---|---|---|
+| split | 고정 시드 42, train/dev/test = 0.2/0.4/0.4. DNA 는 질문 단위, Jigsaw 는 같은 본문 그룹 단위로 묶음 | A-split, A-split-dup |
+| similarity | roberta 임베딩 코사인 유사도 | A-sim |
+| coords | 임베딩 PCA 2차원 | A-coords |
+| PD 라벨 | `probably_needs_caution` 이상 = 위반 | A-pd-label |
+
+조교 파일이 오면 어댑터가 자동으로 그쪽을 읽고, 위 결과는 다시 계산합니다.
+
+---
+
+## 3. Proposed Method
+
+### 3.1 P1 규칙 찾기 — 트리를 위에서부터 걸러 내려간다
+
+텍스트와 81개 노드의 유사도를 구한 뒤 BFS 로 내려갑니다. 중분류 단계에서 유사도가 **τ 미만인
+가지는 잘라** 비교 횟수를 줄입니다(전부 잘리면 최고점 하나는 남김). 지표는 top-k 정확도,
+**효율**(비교한 노드 수 / 81), 처음 갈라진 단계, 경계 사례(τ±0.02 에서 top-1 이 바뀜)입니다.
+
+### 3.2 P2 판정 — 위반 확률은 판정 토큰의 확률로 잰다
+
+생성 결과 문자열을 파싱하지 않고, **판정 토큰 자리의 확률을 한 번의 forward 로 직접** 읽습니다.
+
+| 모델 | p(위반) |
+|---|---|
+| ShieldGemma · 팀 | softmax(`Yes`, `No`) 의 `Yes` |
+| Llama Guard | softmax(`safe`, `unsafe`) 의 `unsafe` |
+| Qwen3Guard | `Unsafe` + w·`Controversial` (w = 1.0, strict) |
+
+규칙을 받는 모델은 네 조건으로 판정합니다.
+
+| 조건 | 받는 규칙 | 묻는 것 |
+|---|---|---|
+| `base` | P1 상위 5 후보, 최댓값 집계 | 실제 운영 성능 |
+| `rule_excluded` | 정답 위해 유형을 뺀 상위 5 | 처음 보는 규칙에서 얼마나 떨어지나 |
+| `rule_only` | 정답 규칙 하나 | 검색이 완벽하면 맞히나 |
+| `rule_plus_examples` | 정답 규칙 + 위반·정상 예시 2개씩 | 예시가 도움이 되나 |
+
+### 3.3 P3 오류 진단 — 순서대로 첫 번째로 걸리는 원인
+
+틀린 판정마다 아래 규칙을 **위에서부터** 적용합니다. 결과가 빠진 모델이 있으면 2–4번은
+적용하지 않고 `unclassified` 로 둡니다.
+
+1. **규칙 찾기** — (규칙 모델만) 정답 규칙 순위 > 5, 또는 `rule_only` 에서는 맞음
+2. **라벨 확인** — 4개 모델의 base 답이 모두 같음
+3. **규칙 문장** — `rule_only` 에서 ShieldGemma 와 팀 둘 다 틀림
+4. **판정 모델** — 나머지
+
+### 3.4 P4 수정 효과
+
+임계값(0.3 / 0.7), τ(0.15 / 0.25), 집계(top1) 를 바꿨을 때 뒤집히는 판정을 세고, 규칙 문장
+하나를 고쳐 다시 판정합니다. 화면에서 임계값 슬라이더와 "다시 판정" 으로 직접 해 볼 수 있습니다.
+
+---
+
+## 4. Experiment Design
+
+### 4.1 무엇을 비교했는가
+
+**현재 설정값은 아래 측정으로 정했습니다.** 원본 수치는 `results/` 에 있습니다.
+
+| 비교한 것 | 결론 | 근거 |
+|---|---|---|
+| τ 격자 0.10 – 0.40 (DNA dev 전체) | **τ = 0.20** | 효율 ≤ 0.4 인 τ 중 top-1 최대 (0.321, 효율 0.353). 0.15 는 top-1 0.344 지만 효율 0.417 로 기준 초과 → [`tau_comparison.csv`](results/p1/tau_comparison.csv) |
+| Jigsaw 를 트리에 넣기 전·후 | τ 가 0.15 → 0.20 으로 이동 | DNA top-1 0.372 → 0.344 (τ = 0.15). DNA 298건이 Jigsaw 규칙으로 찾아짐 → 멘토링 질문 1 |
+| 팀 임계값: 출처별 vs 공통 | **출처별** (DNA 0.60 / Jigsaw 0.15 / PD 0.01) | 출처별 dev F1 최대. 공통 하나로는 0.01 (평균 F1 0.539) → [`team_thresholds.csv`](results/team_thresholds.csv) |
+| 후보 집계 max vs top1 | **max** (잠정) | P4 에서 비교 예정 |
+| 판정 토큰 확률 검증 | 통과 | 판정 토큰 확률 합 ≥ 0.9992. 생성 결과와 다른 것은 p = 0.5 동률뿐 (A-token-check) |
+| Gemma2 attention eager vs sdpa | **eager 유지** | softcapping 때문에 sdpa 는 결과가 달라짐 |
+| 배치 방식 (고정 vs 길이 기반) | **길이 정렬 + 토큰 예산 배치** | 배치 × 최대 길이² ≤ 2,000,000. 같은 양이 약 2.4배 빨라짐 (팀 v1 실행 11.4건/초) |
+
+### 4.2 Evaluation Metrics
+
+- **P1 규칙 찾기**: top-1 / top-3 정확도, 효율(비교 노드 비율), 경계 사례 수
+- **P2 판정**: ROC-AUC, PR-AUC, F1(위반), 사람 라벨과의 Cohen's κ, 모델 쌍 κ
+- **P3 진단**: 원인별 잘못된 판정 건수, `unclassified` 건수
+
+### 4.3 측정 원칙
+
+1. **dev 와 test 를 가른다.** 임계값·τ·프롬프트는 dev 에서만 정하고, test 는 최종 설정을 고정한 뒤 1회만 본다.
+2. **수치에는 표본을 같이 적는다.** Jigsaw·PD 는 50건이라 차이를 과하게 해석하지 않는다.
+3. **같은 본문은 같은 split 에.** Jigsaw 에서 같은 본문 43그룹 188행이 split 을 넘나드는 누수를 찾아 105행을 옮겼다.
+4. **임시로 정한 것은 전부 적는다.** 조교 파일이 없어 정한 것은 [ASSUMPTIONS](docs/ASSUMPTIONS.md) 에 번호를 붙여 남긴다.
+
+---
+
+## 5. 실험 결과
+
+### 5.1 기록 규칙
 
 - 원자료는 `results/experiments.csv` 하나다. 컬럼: `version, run_id, date, commit, split, table, source, model, metric, value, note`.
 - 새 실험은 **행을 추가만** 한다. 이전 결과는 지우거나 고치지 않는다.
@@ -65,13 +230,15 @@ C:/ml/aiethics/.venv/Scripts/streamlit run app/app.py
 - README 표는 손으로 고치지 않는다. 위 명령이 `experiments.csv` 에서 만든다. 새 version 은 아래 자리표시 바로 밑(맨 위)에 쌓인다.
 - 수치는 dev 결과만 적는다. test 결과는 `split=test` 행으로 따로 기록하고 표 제목에 `test` 를 쓴다.
 
-### 알려진 문제 (Baseline v0)
+### 5.2 알려진 문제 (Baseline v0)
 
 1. **임시 split·규칙 트리:** 조교 `splits.csv`·similarity·coords 가 없어 고정 시드 split, roberta 유사도, PCA coords 를 임시로 만들었다. 규칙 트리는 DNA·Jigsaw 를 한 트리에 넣었고, DNA 텍스트 298건(13.2%)의 top-1 이 Jigsaw 규칙이다 → [BASELINE_REPORT 질문 1](docs/BASELINE_REPORT.md#7-멘토링조교-질문).
 2. **Jigsaw·ProsocialDialog 는 dev 50건 표본:** 지표의 변동이 크다. DNA 만 dev 전체(2,256건)다.
 3. **팀 v1·ShieldGemma 의 DNA 판정 대상 의심:** DNA 에서 AUC 가 팀 v1 0.434, ShieldGemma 0.516 으로 무작위 수준 이하다. DNA 응답 대부분이 거절문인데, 거절문 속 유해 주제 언급을 위반으로 보는 것으로 의심된다(질문·응답 중 무엇을 판정하는지 확인 필요).
 4. **최댓값 집계 문제:** base 는 상위 5 후보 규칙의 위반 확률 최댓값을 쓴다. P1 top-1 이 0.32 라 후보 대부분이 엉뚱한 규칙이고, DNA 에서는 정답 규칙을 뺀 rule_excluded AUC 가 base 보다 높다(ShieldGemma 0.583 vs 0.516, 팀 0.535 vs 0.434).
 5. **PD 팀 임계값이 0.01 에 걸림:** 출처별 dev F1 최대 기준으로 고르면, 위반 비율이 72% 인 ProsocialDialog 에서는 '거의 전부 위반'이 F1 을 최대로 만들어 임계값이 격자 최솟값 0.01 이 된다.
+
+### 5.3 결과 표
 
 <!-- results:new -->
 
@@ -150,3 +317,46 @@ C:/ml/aiethics/.venv/Scripts/streamlit run app/app.py
 | B-SG | shieldgemma | 56.3분 (3,380초) | 판정; n_forward=15507; 5번 나눠 실행한 로그 합산(15+7+18+14+2.4분), 근사 |
 | T1 | team | 22.7분 (1,359초) | 판정; n_forward=15507; model_status.csv (길이 기반 배치 적용 후) |
 <!-- /results:baseline-v0 -->
+
+### 5.4 해석 (dev 기준, 잠정)
+
+- **팀 판정기 v1 은 DNA 에서 실패했다** (AUC 0.434 < 0.5). DNA 응답 대부분이 거절문인데, v1 프롬프트가 거절문 속 유해 주제 언급을 위반으로 보는 것으로 의심된다. v2 프롬프트("거절·경고·안전한 안내는 위반이 아니다")가 이 가설을 직접 시험한다.
+- **정답 규칙을 빼도 성능이 오른다.** ShieldGemma·팀 모두 DNA 에서 `rule_excluded` AUC 가 `base` 보다 높다 → 최댓값 집계가 엉뚱한 후보 규칙 때문에 판정을 흐린다.
+- **사람 라벨 재검토 후보 DNA 47건**: 4개 모델이 모두 같은 답인데 사람 라벨만 다르다.
+- **Jigsaw·PD 에서는 판정기 간 차이가 작다.** 50건 표본이라 순위를 정하지 않는다.
+
+상세 해석과 조건별 AUC 는 [`docs/BASELINE_REPORT.md`](docs/BASELINE_REPORT.md).
+
+---
+
+## 6. 기술 스택과 핵심 결정
+
+| 영역 | 선택 | 판단 근거 |
+|---|---|---|
+| 실행 환경 | Python + PyTorch (CUDA 12.6), RTX 3060 8GB | 로컬 GPU 한 장에서 4개 모델을 돌릴 수 있는 크기만 사용 |
+| 모델 로딩 | Hugging Face `transformers`, bf16 | 학습 없이 추론만. `HF_HOME=C:/ml/hf-cache` |
+| 위반 확률 | 판정 토큰 확률 (teacher forcing, 마지막 위치 logit 만) | 문자열 파싱보다 안정적, ROC/PR-AUC 계산 가능. 메모리 초과도 해결 |
+| 판정 캐시 | SQLite (512건마다 저장) | 긴 실행이 중간에 끊겨도 이어서 돌림 |
+| 지표 | scikit-learn | 표준 구현 (`roc_auc`, `average_precision`, `f1`, `cohen_kappa`) |
+| 화면 | Streamlit + Altair | 최소 화면. 탭 간 선택 공유, 좌표 brush 선택 |
+| 실험 기록 | `results/experiments.csv` (long format) + `record_run.py` | README 표를 손으로 쓰지 않고 원장에서 생성 → 수치 불일치 방지 |
+
+---
+
+## 7. 산출물과 다음 할 일
+
+| | 무엇 |
+|---|---|
+| **파이프라인** | `scripts/run.py --steps data,p1,judge,p2,p3,p4` 한 번으로 전 단계 실행 |
+| **결과** | P1 검색 결과·τ 비교, 4개 모델 판정표, P2 지표·κ, P3 원인표 (`results/`, 원문 없음) |
+| **화면** | Streamlit 4탭 — 규칙 찾기 · 판정 비교 · 오류 진단 · 수정 효과 |
+| **문서** | [ASSUMPTIONS](docs/ASSUMPTIONS.md) 임시 결정 · [BASELINE_REPORT](docs/BASELINE_REPORT.md) 보고서와 멘토링 질문 7개 |
+| **테스트** | pytest 17개 |
+
+**다음 할 일**
+
+1. 팀 프롬프트 v2·v3 를 dev 에서 비교 (`T2`, `T3`) — DNA 거절문 문제
+2. P4 를 4개 모델 결과로 실행
+3. Jigsaw dev 전체(783건) + PD dev 500건 판정 (약 20–35분 추정)
+4. 조교 파일이 오면 어댑터로 교체 후 재실행
+5. 최종 프롬프트·임계값 고정 뒤 test 1회 평가
