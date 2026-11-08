@@ -1,1 +1,4 @@
-
+split,source,model_a,model_b,n,kappa,note
+dev,do_not_answer,llama_guard,qwen3guard,2256,0.3699,
+dev,jigsaw,llama_guard,qwen3guard,50,0.5981,
+dev,prosocial,llama_guard,qwen3guard,50,0.3021,

@@ -38,3 +38,11 @@ def test_split_keeps_question_together_and_is_deterministic():
     s1, s2 = data.temporary_split(d, r, 1), data.temporary_split(d, r, 1)
     assert (s1 == s2).all()
     assert d.assign(s=s1).groupby("group_id")["s"].nunique().eq(1).all()
+
+
+def test_jigsaw_same_body_same_split():
+    t, _ = data.load_jigsaw(RAW)
+    s = data.temporary_split(t, {"train": 0.34, "dev": 0.33, "test": 0.33}, 1)
+    u = data.unify_split_by_text(t, s)
+    assert t.assign(s=u).groupby("text")["s"].nunique().eq(1).all()
+    assert ((u != s) <= t["text"].duplicated(keep=False)).all()  # 중복 본문 행만 바뀜

@@ -40,6 +40,7 @@ def load_jigsaw(raw_dir):
         "text": d["body"], "context": "r/" + d["subreddit"].astype(str),
         "human_label": d["rule_violation"].astype(int), "response_llm": "",
         "group_id": "jig-" + d["row_id"].astype(str), "rule": d["rule"],
+        "row_id": d["row_id"],
     })
     ex = []
     for _, r in d.iterrows():
@@ -127,6 +128,14 @@ def temporary_split(df, ratio, seed):
     return df["group_id"].map(m)
 
 
+def unify_split_by_text(df, split):
+    """같은 본문(공백·대소문자 무시)이 여러 split 에 나뉘면, 그 그룹에서 row_id 가 가장 작은 행의 split 으로 맞춘다.
+    중복 본문 행만 바뀌고 나머지 행의 split 은 그대로다 (누수 방지)."""
+    key = df["text"].astype(str).str.strip().str.lower()
+    first = df.assign(_k=key, _s=split).sort_values("row_id").groupby("_k")["_s"].first()
+    return key.map(first)
+
+
 def apply_splits(cfg, df):
     ta, _ = adapters.read(cfg, "splits") if adapters.has_ta(cfg, "splits") else (None, True)
     if ta is not None:
@@ -209,6 +218,10 @@ def prepare(cfg):
     for p in parts:
         p["split"] = temporary_split(p, cfg["data"]["split_ratio"], cfg["seed"])
         p["split_source"] = "temporary"
+    if jig is not None:
+        new = unify_split_by_text(jig, jig["split"])
+        print(f"[split] Jigsaw 같은 본문 split 통일: {int((new != jig['split']).sum())}행 이동")
+        jig["split"] = new
     if "prosocial" in cfg["data"]["sources"]:
         pdl = load_prosocial(cfg)
         pdl["split_source"] = "original_hf"

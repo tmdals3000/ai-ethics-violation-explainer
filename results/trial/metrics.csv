@@ -1,0 +1,25 @@
+source,model,condition,n,n_pos,n_pred_pos,error_rate,roc_auc,pr_auc,f1,kappa_human,note
+do_not_answer,llama_guard,base,50,1,1,0.04,0.5204,0.0385,0.0,-0.0204,소수 클래스 1건 → 불안정
+do_not_answer,qwen3guard,base,50,1,0,0.02,0.8571,0.125,0.0,0.0,소수 클래스 1건 → 불안정
+do_not_answer,shieldgemma,base,50,1,0,0.02,0.0612,0.0213,0.0,0.0,소수 클래스 1건 → 불안정
+do_not_answer,shieldgemma,rule_excluded,50,1,0,0.02,0.1429,0.0233,0.0,0.0,소수 클래스 1건 → 불안정
+do_not_answer,shieldgemma,rule_only,50,1,0,0.02,0.1224,0.0222,0.0,0.0,소수 클래스 1건 → 불안정
+do_not_answer,shieldgemma,rule_plus_examples,50,1,2,0.06,0.2041,0.025,0.0,-0.0274,소수 클래스 1건 → 불안정
+do_not_answer,team,base,50,1,34,0.7,0.051,0.0208,0.0,-0.0404,소수 클래스 1건 → 불안정
+do_not_answer,team,rule_excluded,50,1,24,0.5,0.1327,0.0227,0.0,-0.0399,소수 클래스 1건 → 불안정
+do_not_answer,team,rule_only,50,1,40,0.82,0.1224,0.0227,0.0,-0.0406,소수 클래스 1건 → 불안정
+do_not_answer,team,rule_plus_examples,50,1,42,0.82,0.1633,0.0238,0.0465,0.0077,소수 클래스 1건 → 불안정
+jigsaw,llama_guard,base,50,26,28,0.4,0.6474,0.6896,0.6296,0.1961,
+jigsaw,qwen3guard,base,50,26,26,0.36,0.6587,0.6695,0.6538,0.2788,
+jigsaw,shieldgemma,base,50,26,17,0.38,0.722,0.7309,0.5581,0.2496,
+jigsaw,shieldgemma,rule_excluded,50,26,16,0.4,0.7588,0.753,0.5238,0.2114,
+jigsaw,shieldgemma,rule_only,50,26,8,0.4,0.7404,0.7812,0.4118,0.2212,
+jigsaw,shieldgemma,rule_plus_examples,50,26,14,0.36,0.7452,0.7107,0.55,0.2925,
+jigsaw,team,base,50,26,45,0.42,0.7163,0.7443,0.7042,0.1322,
+jigsaw,team,rule_excluded,50,26,28,0.32,0.7596,0.7656,0.7037,0.3569,
+jigsaw,team,rule_only,50,26,47,0.46,0.6346,0.6712,0.6849,0.0464,
+jigsaw,team,rule_plus_examples,50,26,50,0.48,0.6739,0.6365,0.6842,0.0,
+prosocial,llama_guard,base,50,36,9,0.54,0.7569,0.8976,0.4,0.1573,
+prosocial,qwen3guard,base,50,36,24,0.32,0.8056,0.9247,0.7333,0.3711,
+prosocial,shieldgemma,base,50,36,8,0.6,0.6597,0.8464,0.3182,0.0764,
+prosocial,team,base,50,36,28,0.48,0.5913,0.8063,0.625,-0.0135,

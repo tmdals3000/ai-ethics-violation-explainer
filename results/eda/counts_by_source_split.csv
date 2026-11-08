@@ -2,9 +2,9 @@ source,split,n,n_violation,violation_rate
 do_not_answer,dev,2256,65,0.0288
 do_not_answer,test,2256,79,0.035
 do_not_answer,train,1122,49,0.0437
-jigsaw,dev,812,413,0.5086
-jigsaw,test,812,416,0.5123
-jigsaw,train,405,202,0.4988
+jigsaw,dev,783,400,0.5109
+jigsaw,test,849,427,0.5029
+jigsaw,train,397,204,0.5139
 prosocial,dev,20416,14626,0.7164
 prosocial,test,25029,18391,0.7348
 prosocial,train,120236,83088,0.691

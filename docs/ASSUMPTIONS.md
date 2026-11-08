@@ -5,6 +5,7 @@
 | ID | 항목 | 임시로 정한 내용 | 바꾸는 곳 |
 |---|---|---|---|
 | A-split | split | 조교 `splits.csv` 없음 → DNA·Jigsaw 는 고정 시드(42) train 0.2 / dev 0.4 / test 0.4. DNA 는 **같은 질문의 응답 6개가 한 split** 에 들어가게 질문 단위로 나눔. ProsocialDialog 는 HF 원래 split(validation→dev). `split_source` 컬럼에 `temporary` / `original_hf` 표시. train 은 예시 후보로만 사용 | `data.split_ratio`, `ta_dir/splits.csv` |
+| A-split-dup | Jigsaw 중복 본문 | 같은 본문(앞뒤 공백·대소문자 무시)이 57그룹 217행. 행 단위로 나누면 43그룹 188행이 서로 다른 split 에 걸쳐 누수 → 중복 그룹만 그 그룹에서 row_id 가 가장 작은 행의 split 으로 통일(105행 이동, 나머지 행은 그대로). 같은 본문인데 규칙이 다른 그룹 6개, 같은 본문·규칙인데 라벨이 다른 경우 11개는 그대로 둠(라벨 확인 후보) | `data.unify_split_by_text` |
 | A-textid | text_id | `dna-{질문id}-{응답LLM}`, `jig-{row_id}`, `pd-{hf_split}-{dialogue_id}-{response_id}` | `src/data.py` |
 | A-pd-label | ProsocialDialog 라벨 | casual·possibly_needs_caution → 정상(0), probably_needs_caution·needs_caution·needs_intervention → 위반(1). 데이터 설명서 기준이 오면 교체 | `data.prosocial_label_map` |
 | A-pd-text | ProsocialDialog 판정 대상 | 데이터의 `context` 필드(사용자 발화, 안전 라벨이 붙은 쪽)가 text. 같은 대화의 이전 4개 발화를 context 로 붙임. 데이터가 원래 영어라 영어 필터(ASCII 비율 ≥ 0.9)로 빠진 건수는 0 | `data.english_min_ascii_ratio` |
@@ -26,6 +27,8 @@
 | A-threshold | 임계값 | 기준 모델 0.5 고정. 팀 판정기는 dev 에서 출처별 F1 평균이 최대인 값(grid) | `judge.team_threshold_grid` |
 | A-team | 팀 판정기 | 조교 ShieldGemma 코드가 없어 직접 작성. ShieldGemma-2B 가중치 그대로(학습 없음), 프롬프트만 바꿈(맥락 포함·대상 텍스트만 평가). 로컬 RTX 3060 실행(PDF 는 Spark) | `src/judges.py:TEAM_PROMPTS` |
 | A-p3-missing | P3 결과 누락 | 판정 결과가 없는 모델이 있으면 '라벨 확인 필요'(규칙 2)를 적용하지 않고 `missing_models`, `rule2_applicable=False` 로 표시. 현재 Qwen3Guard 만 있어 DNA 잘못된 판정 87건이 모두 `unclassified` | `src/diagnose.py` |
+| A-token-check | 판정 토큰 검증 (2026-11-08) | 출처·라벨별 24개씩 확인(`results/trial/token_check.csv`). Llama Guard `safe`=19193 / `unsafe`=39257 — 템플릿 끝 `<\|end_header_id\|>` 에 줄바꿈 2개(`\n\n`)를 붙이면 모델이 곧바로 `safe`/`unsafe` 를 생성함을 확인. ShieldGemma·팀 `Yes`=3553 / `No`=1294. 판정 토큰 확률 합(전체 어휘 대비) 최소 0.9992. 토큰 확률 판정(p≥0.5)과 실제 생성 결과 일치 23/24·23/24·24/24 — 어긋난 2건은 모두 p=0.5 정확히 동률 | `src/judges.py` |
+| A-bf16-tie | p = 0.5 동률 | bf16 logit 정밀도 때문에 두 판정 토큰 logit 이 같아지면 p=0.5. 임계값 비교는 `p ≥ threshold` 라 동률은 위반으로 셈 (생성은 앞 토큰을 골라 다를 수 있음) | `judges.HFJudge.score` |
 | A-batch | 수치 오차 | bf16 + 왼쪽 패딩이라 같은 프롬프트도 배치 구성에 따라 p_violation 이 최대 약 0.03 달라질 수 있음(Qwen3Guard 64건 실측 최대 0.028). 캐시가 첫 계산값을 고정하므로 재실행 결과는 같다 | `judge.batch_size` |
 | A-p3 | P3 원인 | 규칙 1 은 규칙을 받는 모델(ShieldGemma·팀)에만 적용. 규칙을 받지 않는 모델의 'rule_only 답' = base 답. 규칙 2 는 4개 모델 결과가 모두 있을 때만, 규칙 3 은 ShieldGemma·팀 결과가 모두 있을 때만 적용(없으면 `unclassified` + 이유) | `src/diagnose.py` |
 | A-priority | 우선순위 | '우선순위 변경' = 후보 집계를 max → top1(유사도 1위 후보만)로 바꾸는 것 | `effects.alt_aggregation` |

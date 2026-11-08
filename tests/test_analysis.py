@@ -56,3 +56,10 @@ def test_diagnose_missing_models_not_forced_to_label_check():
     assert d.cause.item() == "unclassified"
     assert not d.rule2_applicable.item()
     assert d.missing_models.item() == "llama_guard|shieldgemma|team"
+
+
+def test_diagnose_does_not_skip_to_rule4_when_models_missing():
+    per = pd.DataFrame({"text_id": ["a"], "gold_rank": [1]})
+    d = diagnose(_m([("a", "qwen3guard", "base", 0), ("a", "llama_guard", "base", 1)]), per, top_k=5)
+    q = d.set_index("model").loc["qwen3guard"]
+    assert q.cause == "unclassified" and "적용 불가" in q.decided_by

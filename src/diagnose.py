@@ -38,14 +38,15 @@ def diagnose(m, per, top_k):
             cause, by = "retrieval", f"1: 정답 규칙 순위 {gr if gr > 0 else '없음'} > top-{top_k} (base 후보)"
         elif mo in RULE_MODELS and ro(t, mo) == y:
             cause, by = "retrieval", "1: base 틀림·rule_only 맞음 → 다른 후보 규칙이 판정을 바꿈"
-        elif not missing and len(set(base_all)) == 1:  # 4개 모델 결과가 모두 있을 때만
-            cause, by = "label_check", "2: base 에서 4개 모델 모두 같은 답, 사람 라벨만 다름"
-        elif None not in ro_rule and all(p != y for p in ro_rule):
-            cause, by = "rule_text", "3: rule_only 에서 ShieldGemma·팀 판정기 모두 틀림"
-        elif ro(t, mo) is not None and ro(t, mo) != y and any(ro(t, x) == y for x in models if x != mo):
-            cause, by = "judge_model", "4: rule_only 에서 일부 모델만 틀림"
         elif missing or None in ro_rule:
-            by = f"판정 결과가 없는 모델({', '.join(missing) or 'rule_only'})이 있어 규칙 2·3 적용 불가"
+            # 규칙 2·3 을 확인할 수 없으면 규칙 4 로 건너뛰지 않는다 (차례대로 적용)
+            by = f"판정 결과가 없는 모델({', '.join(missing) or 'rule_only'})이 있어 규칙 2–4 적용 불가"
+        elif len(set(base_all)) == 1:
+            cause, by = "label_check", "2: base 에서 4개 모델 모두 같은 답, 사람 라벨만 다름"
+        elif all(p != y for p in ro_rule):
+            cause, by = "rule_text", "3: rule_only 에서 ShieldGemma·팀 판정기 모두 틀림"
+        elif ro(t, mo) != y and any(ro(t, x) == y for x in models if x != mo):
+            cause, by = "judge_model", "4: rule_only 에서 일부 모델만 틀림"
         rows.append({"text_id": t, "model": mo, "source": r.source, "gold_rule_id": r.gold_rule_id,
                      "rule_group": r.rule_group, "human_label": y, "prediction": r.prediction,
                      "gold_rank": gr, "cause": cause, "decided_by": by,
