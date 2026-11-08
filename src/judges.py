@@ -522,6 +522,6 @@ def log_experiments(cfg, j, texts, exp):
                              "condition": cond, "n_dev_per_source": n_desc} | binary_metrics(gg))
     if not rows:  # 팀 판정기 결과가 없으면 기록할 것이 없다 (빈 파일을 만들지 않음)
         return
-    p = cfg["_res"] / "experiments.csv"
+    p = cfg["_res"] / "team_threshold_log.csv"  # 임계값 탐색 기록. 실험 결과표는 scripts/record_run.py → experiments.csv
     new = pd.concat([read_csv_safe(p), pd.DataFrame(rows)], ignore_index=True)
     new.to_csv(p, index=False)
