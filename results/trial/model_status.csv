@@ -1,0 +1,2 @@
+model,prompt_version,status,n_prompts,n_new_forward,seconds,per_second,label_tokens,load_plus_run_seconds
+qwen3guard,official,ok,100,0,0.0,,' Safe'=22291->' Safe'|' Unsafe'=73067->' Unsafe'|' Controversial'=2093->' Cont',41.2

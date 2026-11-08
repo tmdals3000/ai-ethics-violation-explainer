@@ -20,6 +20,7 @@ def main():
     ap.add_argument("--config", default=None)
     ap.add_argument("--allow-test", action="store_true", help="test split 지표 계산 허용")
     ap.add_argument("--models", default=None, help="판정 모델 일부만 (쉼표 구분)")
+    ap.add_argument("--trial", type=int, default=None, help="judge: 출처별 dev N건만 시험 실행 (results/trial/)")
     a = ap.parse_args()
     cfg = load_config(a.config)
     cfg["_allow_test"] = a.allow_test
@@ -36,7 +37,7 @@ def main():
             retrieval.run(cfg)
         elif step == "judge":
             from src import judges
-            judges.run(cfg, a.models.split(",") if a.models else None)
+            judges.run(cfg, a.models.split(",") if a.models else None, a.trial)
         elif step == "p2":
             from src import metrics
             metrics.run(cfg)

@@ -356,9 +356,12 @@ def load_judge(cfg, name, shared):
     return cls(cfg, spec["hf_id"])
 
 
-def run(cfg, only=None):
+def run(cfg, only=None, trial=None):
+    """trial=N 이면 출처별 dev N건만 판정해 results/trial/ 에 따로 저장 (본 결과는 그대로)."""
     texts, nodes, ex, sample = data.load(cfg)
     tgt = targets(cfg, texts, sample)
+    if trial:
+        tgt = data.dev_sample(tgt, int(trial), cfg["data"]["stratify_sample"], cfg["seed"])
     per = pd.read_csv(cfg["_res"] / "p1/retrieval_per_text.csv", keep_default_na=False)
     rule_items, free_items = work_items(cfg, tgt, nodes, per, ex)
     cache = Cache(cfg["_data"] / "cache/judgments.sqlite")
@@ -395,8 +398,11 @@ def run(cfg, only=None):
                 df = pd.DataFrame(items)[["text_id", "condition", "candidate_rule_id"]].assign(
                     model=model, prompt_version=pv, p_violation=p.round(6))
                 rows.append(df)
+                sec = time.time() - t1
                 status.append({"model": model, "prompt_version": pv, "status": "ok", "n_prompts": len(prompts),
-                               "n_new_forward": n_new, "seconds": round(time.time() - t1, 1)})
+                               "n_new_forward": n_new, "seconds": round(sec, 1),
+                               "per_second": round(n_new / sec, 2) if n_new else None,
+                               "label_tokens": "|".join(f"{w!r}={i}->{jd.tok.decode([i])!r}" for w, i in zip(jd.label_words, jd.label_ids))})
                 print(f"[judge] {model}/{pv}: {len(prompts)}개 (새로 계산 {n_new}) {time.time() - t1:.0f}s")
         except Exception as e:
             traceback.print_exc()
@@ -407,9 +413,38 @@ def run(cfg, only=None):
     for n in names:
         if not any(s["model"] == n for s in status):
             status.append({"model": n, "status": "skipped"})
+    if trial:
+        trial_report(cfg, rows, status, texts)
+        return
     finalize(cfg, rows, ta, texts)
     pd.DataFrame(status).to_csv(cfg["_res"] / "model_status.csv", index=False)
     print(pd.DataFrame(status).to_string())
+
+
+def trial_report(cfg, rows, status, texts):
+    """시험 실행 점검: 판정 토큰, 확률 분포(0·1 쏠림, 한 값만 나오는지), 속도."""
+    out = cfg["_res"] / "trial"
+    out.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(status).to_csv(out / "model_status.csv", index=False)
+    if not rows:
+        print("[trial] 판정 결과 없음")
+        return
+    j = pd.concat(rows, ignore_index=True)
+    j.to_csv(out / "judgments.csv", index=False)
+    j = j.merge(texts[["text_id", "source", "human_label"]], on="text_id")
+    rep = []
+    for (mo, pv, src, cond), g in j.groupby(["model", "prompt_version", "source", "condition"]):
+        p = g.p_violation
+        rep.append({"model": mo, "prompt_version": pv, "source": src, "condition": cond, "n": len(g),
+                    "min": p.min(), "q25": p.quantile(.25), "median": p.median(), "q75": p.quantile(.75), "max": p.max(),
+                    "n_unique": p.round(4).nunique(), "share_lt_0.01": (p < .01).mean(), "share_gt_0.99": (p > .99).mean(),
+                    "mean_p_violation_label1": p[g.human_label == 1].mean(), "mean_p_violation_label0": p[g.human_label == 0].mean()})
+    r = pd.DataFrame(rep).round(4)
+    r["flag"] = ["한 값만 나옴" if u <= 1 else "0/1 에 90% 이상 몰림" if lo + hi >= .9 else ""
+                 for u, lo, hi in zip(r.n_unique, r["share_lt_0.01"], r["share_gt_0.99"])]
+    r.to_csv(out / "p_distribution.csv", index=False)
+    print(pd.DataFrame(status).drop(columns=["detail"], errors="ignore").to_string())
+    print(r.to_string())
 
 
 def finalize(cfg, rows, ta, texts):
