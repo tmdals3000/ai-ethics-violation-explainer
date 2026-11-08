@@ -1,7 +1,25 @@
 split,source,model,condition,n,n_pos,n_pred_pos,error_rate,roc_auc,pr_auc,f1,kappa_human,note,pr_auc_note
 dev,do_not_answer,llama_guard,base,2256,65,59,0.0452,0.763,0.1378,0.1774,0.1542,,
 dev,do_not_answer,qwen3guard,base,2256,65,60,0.0386,0.7941,0.254,0.304,0.2842,,
+dev,do_not_answer,shieldgemma,base,2256,65,26,0.0306,0.5155,0.1529,0.2418,0.2291,,
+dev,do_not_answer,shieldgemma,rule_excluded,2256,65,20,0.0306,0.583,0.1453,0.1882,0.1771,,
+dev,do_not_answer,shieldgemma,rule_only,2256,65,24,0.0288,0.5676,0.1811,0.2697,0.2581,,
+dev,do_not_answer,shieldgemma,rule_plus_examples,2256,65,58,0.0465,0.5811,0.1058,0.1463,0.1225,,
+dev,do_not_answer,team,base,2256,65,218,0.1148,0.4342,0.0459,0.0848,0.0423,,
+dev,do_not_answer,team,rule_excluded,2256,65,82,0.0581,0.5353,0.0634,0.1088,0.0792,,
+dev,do_not_answer,team,rule_only,2256,65,217,0.1144,0.4482,0.049,0.0851,0.0427,,
+dev,do_not_answer,team,rule_plus_examples,2256,65,241,0.1294,0.4497,0.0472,0.0458,0.0004,,
 dev,jigsaw,llama_guard,base,50,26,28,0.4,0.6474,0.6896,0.6296,0.1961,,PR-AUC 는 DNA 중심 지표 (참고값)
 dev,jigsaw,qwen3guard,base,50,26,26,0.36,0.6587,0.6695,0.6538,0.2788,,PR-AUC 는 DNA 중심 지표 (참고값)
+dev,jigsaw,shieldgemma,base,50,26,17,0.38,0.722,0.7309,0.5581,0.2496,,PR-AUC 는 DNA 중심 지표 (참고값)
+dev,jigsaw,shieldgemma,rule_excluded,50,26,16,0.4,0.7588,0.753,0.5238,0.2114,,PR-AUC 는 DNA 중심 지표 (참고값)
+dev,jigsaw,shieldgemma,rule_only,50,26,8,0.4,0.7404,0.7812,0.4118,0.2212,,PR-AUC 는 DNA 중심 지표 (참고값)
+dev,jigsaw,shieldgemma,rule_plus_examples,50,26,14,0.36,0.7452,0.7107,0.55,0.2925,,PR-AUC 는 DNA 중심 지표 (참고값)
+dev,jigsaw,team,base,50,26,39,0.34,0.7163,0.7443,0.7385,0.3044,,PR-AUC 는 DNA 중심 지표 (참고값)
+dev,jigsaw,team,rule_excluded,50,26,24,0.32,0.7596,0.7656,0.68,0.361,,PR-AUC 는 DNA 중심 지표 (참고값)
+dev,jigsaw,team,rule_only,50,26,39,0.42,0.6346,0.6712,0.6769,0.1408,,PR-AUC 는 DNA 중심 지표 (참고값)
+dev,jigsaw,team,rule_plus_examples,50,26,48,0.44,0.6739,0.6365,0.7027,0.0864,,PR-AUC 는 DNA 중심 지표 (참고값)
 dev,prosocial,llama_guard,base,50,36,9,0.54,0.7569,0.8976,0.4,0.1573,,PR-AUC 는 DNA 중심 지표 (참고값)
 dev,prosocial,qwen3guard,base,50,36,24,0.32,0.8056,0.9247,0.7333,0.3711,,PR-AUC 는 DNA 중심 지표 (참고값)
+dev,prosocial,shieldgemma,base,50,36,8,0.6,0.6597,0.8464,0.3182,0.0764,,PR-AUC 는 DNA 중심 지표 (참고값)
+dev,prosocial,team,base,50,36,44,0.24,0.5913,0.8063,0.85,0.2788,,PR-AUC 는 DNA 중심 지표 (참고값)

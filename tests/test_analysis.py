@@ -63,3 +63,22 @@ def test_diagnose_does_not_skip_to_rule4_when_models_missing():
     d = diagnose(_m([("a", "qwen3guard", "base", 0), ("a", "llama_guard", "base", 1)]), per, top_k=5)
     q = d.set_index("model").loc["qwen3guard"]
     assert q.cause == "unclassified" and "적용 불가" in q.decided_by
+
+
+def test_thresholds_per_source_and_common():
+    from src.judges import choose_thresholds
+    # 출처 A 는 낮은 확률대(0.1/0.2), B 는 높은 확률대(0.7/0.9) 에서 위반이 갈린다
+    j = pd.DataFrame({"text_id": list("abcdefgh"), "p_violation": [.1, .2, .1, .2, .7, .9, .7, .9]})
+    texts = pd.DataFrame({"text_id": list("abcdefgh"), "source": list("AAAABBBB"), "split": "dev",
+                          "human_label": [0, 1, 0, 1, 0, 1, 0, 1]})
+    th = choose_thresholds({"judge": {"team_threshold_step": 0.01}}, j, texts)
+    assert 0.1 < th["per_source"]["A"][0] <= 0.2 and th["per_source"]["A"][1] == 1.0
+    assert 0.7 < th["per_source"]["B"][0] <= 0.9 and th["per_source"]["B"][1] == 1.0
+    assert th["common"][1] < 1.0  # 공통 임계값 하나로는 두 출처를 모두 맞힐 수 없다
+
+
+def test_token_budget_batches():
+    from src.judges import token_budget_batches
+    b = token_budget_batches([100, 100, 100, 600, 900, 1600], max_batch=8, budget=2_000_000)
+    assert b == [[0, 1, 2, 3], [4], [5]]  # 4×600²=1.44e6 ≤ 2e6, 5×900² > 2e6, 2×1600² > 2e6
+    assert sum(map(len, b)) == 6 and all(len(x) <= 8 for x in b)

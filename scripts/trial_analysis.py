@@ -19,8 +19,9 @@ ids = set(tr.text_id)
 tr = pd.concat([tr, judges.aggregate(tr, cfg["judge"]["aggregation"])], ignore_index=True)
 tr["threshold"] = cfg["judge"]["default_threshold"]
 team = (tr.model == "team")
-th = judges.choose_threshold(cfg, tr[team & (tr.condition == "base") & tr.candidate_rule_id.str.startswith("AGG:")], texts)
-tr.loc[team, "threshold"] = th
+th = judges.choose_thresholds(cfg, tr[team & (tr.condition == "base") & tr.candidate_rule_id.str.startswith("AGG:")], texts)
+src_of = dict(zip(texts.text_id, texts.source))
+tr.loc[team, "threshold"] = tr.loc[team, "text_id"].map(src_of).map({s: t for s, (t, _) in th["per_source"].items()})
 main, _ = adapters.read(cfg, "judgments")
 main = main[main.model.isin(["llama_guard", "qwen3guard"]) & main.text_id.isin(ids)]
 j = main_rows(pd.concat([main, tr], ignore_index=True))

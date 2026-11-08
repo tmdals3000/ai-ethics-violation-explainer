@@ -73,12 +73,17 @@ def base_items(cfg, tgt, per, rule):
     return out
 
 
+def per_text_threshold(jj):
+    """텍스트별 임계값 (팀 판정기는 출처별 임계값이라 텍스트마다 다를 수 있다)."""
+    return jj.drop_duplicates("text_id").set_index("text_id").threshold.astype(float)
+
+
 def rejudge_base(cfg, tgt, per, rule, pv, th, how):
     items = base_items(cfg, tgt, per, rule)
     p = judges.score_team(cfg, items, pv)
     j = pd.DataFrame(items)[["text_id", "condition", "candidate_rule_id"]].assign(model="team", prompt_version=pv, p_violation=p)
     agg = judges.aggregate(j, how)
-    return agg.assign(prediction=(agg.p_violation >= th).astype(int))[["text_id", "p_violation", "prediction"]]
+    return agg.assign(prediction=(agg.p_violation >= agg.text_id.map(th)).astype(int))[["text_id", "p_violation", "prediction"]]
 
 
 def run(cfg):
@@ -105,7 +110,7 @@ def run(cfg):
         cur = m[(m.model == th_model) & (m.condition == "base") & (m.split == "dev")]
         for th in ec["alt_thresholds"]:
             after = cur.assign(prediction=(cur.p_violation >= th).astype(int))
-            prop = compare(f"threshold_{th_model}_{th}", {"model": th_model, "threshold": [float(cur.threshold.iloc[0]), th],
+            prop = compare(f"threshold_{th_model}_{th}", {"model": th_model, "threshold": [cur.groupby("source").threshold.first().to_dict(), th],
                            "substitute_model": th_model != ec["model"]},
                            cur[["text_id", "p_violation", "prediction"]], after[["text_id", "p_violation", "prediction"]], meta)
             save(cfg, prop)
@@ -118,13 +123,13 @@ def run(cfg):
     j, _ = adapters.read(cfg, "judgments")
     pv = cfg["judge"]["team_prompt_versions"][-1]
     jj = j[(j.model == mo) & (j.prompt_version.astype(str) == (pv if mo == "team" else "official"))]
-    th = float(jj.threshold.iloc[0])
+    th = per_text_threshold(jj)
     cur = main_rows(jj)
     cur = cur[(cur.condition == "base") & cur.text_id.isin(tgt.text_id)][["text_id", "p_violation", "prediction"]]
 
     # (3) 우선순위(후보 집계) 변경: max → top1
     agg = judges.aggregate(jj[jj.text_id.isin(tgt.text_id)], ec["alt_aggregation"])
-    agg = agg[agg.condition == "base"].assign(prediction=lambda x: (x.p_violation >= th).astype(int))
+    agg = agg[agg.condition == "base"].assign(prediction=lambda x: (x.p_violation >= x.text_id.map(th)).astype(int))
     save(cfg, compare(f"priority_{mo}_{ec['alt_aggregation']}", {"model": mo, "aggregation": [cfg["judge"]["aggregation"], ec["alt_aggregation"]]},
                       cur, agg[["text_id", "p_violation", "prediction"]], meta))
 
@@ -159,7 +164,7 @@ def rule_edit(cfg, nid, new):
     mo, pv = "team", cfg["judge"]["team_prompt_versions"][-1]
     j, _ = adapters.read(cfg, "judgments")
     jj = j[(j.model == mo) & (j.prompt_version.astype(str) == pv)]
-    th = float(jj.threshold.iloc[0])
+    th = per_text_threshold(jj)
     cur = main_rows(jj)
     cur = cur[(cur.condition == "base") & cur.text_id.isin(tgt.text_id)][["text_id", "p_violation", "prediction"]]
     tree = retrieval.Tree(nodes)
@@ -186,6 +191,6 @@ def rule_edit(cfg, nid, new):
         p = judges.score_team(cfg, items, pv)
         b = main_rows(jj)
         b = b[(b.condition == "rule_only") & b.text_id.isin(gt.text_id)][["text_id", "p_violation", "prediction"]]
-        a = pd.DataFrame({"text_id": gt.text_id.values, "p_violation": p, "prediction": (p >= th).astype(int)})
+        a = pd.DataFrame({"text_id": gt.text_id.values, "p_violation": p, "prediction": (p >= gt.text_id.map(th).values).astype(int)})
         prop["rule_only"] = compare("ro", {}, b, a, meta)
     return prop

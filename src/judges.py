@@ -130,6 +130,18 @@ def rule_with_examples(rule, examples):
     return "\n".join(lines)
 
 
+def token_budget_batches(lengths, max_batch, budget):
+    """길이순으로 정렬된 토큰 수 목록을 배치로 나눈다. 배치 크기 × 최대 길이² ≤ budget (attention 메모리),
+    배치 크기 ≤ max_batch. 긴 프롬프트는 적게, 짧은 프롬프트는 많이 묶는다."""
+    batches, cur = [], []
+    for i, n in enumerate(lengths):
+        if cur and (len(cur) + 1 > max_batch or (len(cur) + 1) * n * n > budget):
+            batches.append(cur)
+            cur = []
+        cur.append(i)
+    return batches + ([cur] if cur else [])
+
+
 # ---------- 모델 ----------
 class HFJudge:
     """판정 토큰 확률 기반 판정기. 하위 클래스는 build(item) 와 label 토큰만 정한다."""
@@ -157,14 +169,16 @@ class HFJudge:
     def score(self, prompts):
         torch = self.torch
         out = []
-        bs = self.cfg["judge"]["batch_size"]
-        order = np.argsort([len(p) for p in prompts])
-        for i in range(0, len(prompts), bs):
-            batch = [prompts[j] for j in order[i:i + bs]]
+        n_tok = [len(x) for x in self.tok(prompts, add_special_tokens=self.add_special_tokens).input_ids]
+        order = np.argsort(n_tok)
+        for batch_idx in token_budget_batches([n_tok[j] for j in order], self.cfg["judge"]["batch_size"],
+                                              self.cfg["judge"]["attn_budget"]):
+            batch = [prompts[order[j]] for j in batch_idx]
             enc = self.tok(batch, return_tensors="pt", padding=True, add_special_tokens=self.add_special_tokens).to("cuda")
             with torch.no_grad():
                 # 마지막 위치 logit 만 계산 (전체 위치 × 어휘 크기는 GPU 메모리를 넘음)
-                logits = self.model(**enc, logits_to_keep=1).logits[:, -1, :]
+                # use_cache=False: 판정에 필요 없는 KV 캐시를 만들지 않아 메모리 절약 (결과는 같음)
+                logits = self.model(**enc, logits_to_keep=1, use_cache=False).logits[:, -1, :]
             pr = torch.softmax(logits[:, self.label_ids].float(), dim=-1).cpu().numpy()
             out += list(self.to_p(pr))
         res = np.empty(len(prompts))
@@ -252,7 +266,8 @@ class Cache:
 def score_cached(judge, cache, model_key, prompts):
     keys = [Cache.key(model_key, p) for p in prompts]
     have = cache.get_many(list(set(keys)))
-    miss = sorted({k: p for k, p in zip(keys, prompts) if k not in have}.items())
+    # 전체를 길이순으로 정렬한 뒤 512건씩 나눈다 → 배치 안 길이가 비슷해 패딩 낭비가 적다
+    miss = sorted({k: p for k, p in zip(keys, prompts) if k not in have}.items(), key=lambda kv: (len(kv[1]), kv[0]))
     for i in range(0, len(miss), 512):  # 512건마다 저장 → 중간에 멈춰도 다시 실행하면 이어서 계산
         chunk = miss[i:i + 512]
         ps = judge.score([p for _, p in chunk])
@@ -315,17 +330,24 @@ def aggregate(df, how):
     return agg.assign(candidate_rule_id=f"AGG:{how}")
 
 
-def choose_threshold(cfg, j, texts):
-    """dev 에서 출처별 F1 평균이 가장 큰 임계값. (test 는 쓰지 않는다)"""
+def threshold_grid(cfg):
+    s = cfg["judge"]["team_threshold_step"]
+    return np.round(np.arange(s, 1.0, s), 4)
+
+
+def choose_thresholds(cfg, j, texts):
+    """dev 에서만 임계값을 고른다 (test 는 쓰지 않음). 지표는 F1(위반 기준). 같은 F1 이면 낮은 임계값.
+    per_source: 출처마다 dev F1 최대 → {source: (임계값, F1)}  ← 최종 판정에 사용
+    common:     모든 출처에 하나, 출처별 F1 의 평균 최대 → (임계값, 평균 F1)  ← 비교용"""
     from sklearn.metrics import f1_score
     m = j.merge(texts[["text_id", "source", "split", "human_label"]], on="text_id")
     m = m[m.split == "dev"]
-    best = (cfg["judge"]["default_threshold"], -1)
-    for th in cfg["judge"]["team_threshold_grid"]:
-        f = np.mean([f1_score(g.human_label, g.p_violation >= th, zero_division=0) for _, g in m.groupby("source")])
-        if f > best[1]:
-            best = (th, f)
-    return best[0]
+    grid = threshold_grid(cfg)
+    f1 = pd.DataFrame({src: [f1_score(g.human_label, g.p_violation >= t, zero_division=0) for t in grid]
+                       for src, g in m.groupby("source")}, index=grid)
+    per = {s: (float(f1[s].idxmax()), round(float(f1[s].max()), 4)) for s in f1}
+    mean = f1.mean(axis=1)
+    return {"per_source": per, "common": (float(mean.idxmax()), round(float(mean.max()), 4))}
 
 
 def score_team(cfg, items, prompt_version, rules_override=None):
@@ -461,14 +483,21 @@ def finalize(cfg, rows, ta, texts):
         j = pd.concat([old[j.columns], j], ignore_index=True)
     j = pd.concat([j, aggregate(j, cfg["judge"]["aggregation"])], ignore_index=True)
     j["threshold"] = cfg["judge"]["default_threshold"]
-    exp = []
+    src = j.text_id.map(dict(zip(texts.text_id, texts.source)))
+    exp, th_rows = [], []
     for pv in j.loc[j.model == "team", "prompt_version"].unique():
         sel = (j.model == "team") & (j.prompt_version == pv)
         main = j[sel & (j.condition == "base") & j.candidate_rule_id.str.startswith("AGG:")]
-        th = choose_threshold(cfg, main, texts)
-        j.loc[sel, "threshold"] = th
+        th = choose_thresholds(cfg, main, texts)
+        # 최종 판정은 출처별 임계값 (모든 조건에 같은 출처 임계값 적용)
+        j.loc[sel, "threshold"] = src[sel].map({s: t for s, (t, _) in th["per_source"].items()})
         exp.append((pv, th))
+        for s, (t, f) in th["per_source"].items():
+            th_rows.append({"prompt_version": pv, "source": s, "per_source_threshold": t, "per_source_dev_f1": f,
+                            "common_threshold": th["common"][0], "common_mean_dev_f1": th["common"][1]})
     j["prediction"] = (j.p_violation >= j.threshold).astype(int)
+    if th_rows:
+        pd.DataFrame(th_rows).to_csv(cfg["_res"] / "team_thresholds.csv", index=False)
     if ta is not None:
         j = pd.concat([ta, j[~j.model.isin(set(ta.model))]], ignore_index=True)
     j.to_csv(old_p, index=False)
@@ -480,12 +509,17 @@ def log_experiments(cfg, j, texts, exp):
     m = j.merge(texts[["text_id", "source", "split", "human_label"]], on="text_id")
     m = m[(m.split == "dev") & (m.model == "team")]
     rows = []
+    n = cfg["data"]["dev_sample_per_source"]
+    n_desc = ";".join(f"{k}={v}" for k, v in n.items()) if isinstance(n, dict) else n
     for pv, th in exp:
         for (src, cond), g in m[m.prompt_version == pv].groupby(["source", "condition"]):
             g = g[g.candidate_rule_id.str.startswith("AGG:")] if cond in ("base", "rule_excluded") else g
-            rows.append({"timestamp": time.strftime("%Y-%m-%d %H:%M:%S"), "prompt_version": pv, "threshold": th,
-                         "split": "dev", "source": src, "condition": cond,
-                         "n_dev_per_source": cfg["data"]["dev_sample_per_source"]} | binary_metrics(g))
+            # 두 방식을 모두 기록: 출처별 임계값(최종) / 공통 임계값(비교)
+            for mode, t in [("per_source", th["per_source"][src][0]), ("common", th["common"][0])]:
+                gg = g.assign(prediction=(g.p_violation >= t).astype(int))
+                rows.append({"timestamp": time.strftime("%Y-%m-%d %H:%M:%S"), "prompt_version": pv,
+                             "threshold_mode": mode, "threshold": t, "split": "dev", "source": src,
+                             "condition": cond, "n_dev_per_source": n_desc} | binary_metrics(gg))
     if not rows:  # 팀 판정기 결과가 없으면 기록할 것이 없다 (빈 파일을 만들지 않음)
         return
     p = cfg["_res"] / "experiments.csv"

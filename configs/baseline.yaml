@@ -39,7 +39,8 @@ judge:
   top_k_candidates: 5           # base 조건에서 판정할 후보 규칙 수
   aggregation: max              # base 후보 집계 방식: max | top1
   default_threshold: 0.5        # 기준 모델 임계값
-  batch_size: 8
+  batch_size: 16                # 최대 배치 크기 (긴 프롬프트는 attn_budget 으로 줄어듦)
+  attn_budget: 2000000          # 배치 크기 × 최대 길이² 한도 (8 × 500²). 긴 프롬프트의 eager attention 메모리 초과 방지
   max_length: 1024
   qwen_controversial_weight: 1.0  # p = P(Unsafe) + w·P(Controversial). 1.0=strict, 0.0=loose
   moderation_mode: {do_not_answer: response, jigsaw: prompt, prosocial: prompt}
@@ -49,7 +50,7 @@ judge:
     shieldgemma: {hf_id: google/shieldgemma-2b, uses_rules: true}
     team: {hf_id: google/shieldgemma-2b, uses_rules: true}
   team_prompt_versions: [team_v1]  # 확인 후 [team_v1, team_v2, team_v3]
-  team_threshold_grid: [0.05, 0.1, 0.15, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+  team_threshold_step: 0.01     # 팀 판정기 임계값 후보 격자 0.01–0.99. dev F1(위반) 최대를 출처별로 고름 (공통 임계값은 비교용)
   examples_per_label: 2         # rule_plus_examples 에서 위반·비위반 예시 수
 
 diagnose:

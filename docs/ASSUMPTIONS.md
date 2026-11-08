@@ -24,7 +24,7 @@
 | A-mode | 판정 대상 | DNA: 질문(사용자)+응답(챗봇) 중 **응답**을 판정. Jigsaw·ProsocialDialog: 텍스트를 사용자 발화로 판정. 기준 모델에는 맥락(subreddit·이전 대화)을 넣지 않고, 팀 판정기만 넣음 | `judge.moderation_mode` |
 | A-trunc | 긴 텍스트 | 3,000자에서 자름 (프롬프트 끝의 질문이 잘리지 않게) | `judges.MAX_TEXT_CHARS` |
 | A-examples | 규칙+예시 조건 | Jigsaw: 그 행에 딸린 위반 2·비위반 2. DNA: train split 응답 중 같은 소분류(위반 예시가 없으면 같은 중분류) 위반·비위반 최대 2개씩 | `judge.examples_per_label` |
-| A-threshold | 임계값 | 기준 모델 0.5 고정. 팀 판정기는 dev 에서 출처별 F1 평균이 최대인 값(grid) | `judge.team_threshold_grid` |
+| A-threshold | 임계값 | 기준 모델(Llama Guard·Qwen3Guard·ShieldGemma) 0.5 고정. 팀 판정기는 아래 '팀 판정기 임계값 결정 기록' — **출처별 dev F1 최대(최종)**, 공통 임계값 하나(비교용) | `judge.team_threshold_step` |
 | A-team | 팀 판정기 | 조교 ShieldGemma 코드가 없어 직접 작성. ShieldGemma-2B 가중치 그대로(학습 없음), 프롬프트만 바꿈(맥락 포함·대상 텍스트만 평가). 로컬 RTX 3060 실행(PDF 는 Spark) | `src/judges.py:TEAM_PROMPTS` |
 | A-p3-missing | P3 결과 누락 | 판정 결과가 없는 모델이 있으면 '라벨 확인 필요'(규칙 2)를 적용하지 않고 `missing_models`, `rule2_applicable=False` 로 표시. 현재 Qwen3Guard 만 있어 DNA 잘못된 판정 87건이 모두 `unclassified` | `src/diagnose.py` |
 | A-token-check | 판정 토큰 검증 (2026-11-08) | 출처·라벨별 24개씩 확인(`results/trial/token_check.csv`). Llama Guard `safe`=19193 / `unsafe`=39257 — 템플릿 끝 `<\|end_header_id\|>` 에 줄바꿈 2개(`\n\n`)를 붙이면 모델이 곧바로 `safe`/`unsafe` 를 생성함을 확인. ShieldGemma·팀 `Yes`=3553 / `No`=1294. 판정 토큰 확률 합(전체 어휘 대비) 최소 0.9992. 토큰 확률 판정(p≥0.5)과 실제 생성 결과 일치 23/24·23/24·24/24 — 어긋난 2건은 모두 p=0.5 정확히 동률 | `src/judges.py` |
@@ -63,3 +63,23 @@
    | Jigsaw | 0.20 | 0.66 | 0.70 | 0.299 | 2 | |
 
    두 출처가 한 트리를 같이 검색하는 설계(A-tree)가 서로의 정확도·효율에 영향을 준다. 출처별로 트리를 나눌지는 조교에게 확인할 질문으로 남긴다.
+
+## 팀 판정기 임계값 결정 기록
+
+- **지표:** F1 (위반 = 1 기준). dev 에서만 고르고 test 는 쓰지 않는다.
+- **후보:** 0.01–0.99, 0.01 간격 (`judge.team_threshold_step`). F1 이 같으면 가장 낮은 임계값.
+- **대상 판정:** base 조건의 집계 위반 확률(상위 5 후보 최댓값).
+- **방식 1 — 출처별 (최종 판정에 사용):** 출처마다 dev F1 이 가장 높은 임계값을 따로 고른다. 그 출처 텍스트의 모든 조건(base·rule_excluded·rule_only·rule_plus_examples)에 같은 임계값을 쓴다.
+- **방식 2 — 공통 (비교용):** 모든 출처에 같은 임계값 하나. 출처별 dev F1 의 평균이 가장 높은 값.
+- **바꾼 이유:** 처음 쓰던 방식 2 를 시험 표본(출처별 50건)에 적용했더니 0.05 가 골라졌다. DNA 50건에 위반이 1건뿐이라 DNA F1 이 거의 항상 0 이고, 임계값이 사실상 Jigsaw·ProsocialDialog 로만 정해졌다. 출처마다 위반 확률 분포가 달라(DNA 는 대부분 0.1 미만) 하나의 임계값이 맞지 않는다.
+- **dev 결과 (2026-11-08, team_v1, base):**
+
+  | 출처 | 출처별 임계값 | dev F1 | 예측 위반 / 실제 위반 | 공통 임계값 | dev F1 | 예측 위반 |
+  |---|---|---|---|---|---|---|
+  | DNA (2,256) | 0.60 | 0.085 | 218 / 65 | 0.01 | 0.055 | 2,030 |
+  | Jigsaw (50) | 0.15 | 0.739 | 39 / 26 | 0.01 | 0.712 | 47 |
+  | ProsocialDialog (50) | **0.01 (격자 최솟값)** | 0.850 | 44 / 36 | 0.01 | 0.850 | 44 |
+
+  공통 임계값은 0.01 로 골라져 DNA 를 거의 전부 위반으로 예측한다(2,030/2,256). 출처별 방식이 DNA·Jigsaw 에서 낫다.
+  **주의:** ProsocialDialog 는 위반 비율이 72% 라 '거의 전부 위반'이 F1 을 최대로 만들어 임계값이 격자 끝(0.01)에 걸렸다. F1 기준의 한계이며 κ·균형 정확도 등 보조 기준을 멘토링에서 확인할 필요가 있다.
+- **결과:** `results/team_thresholds.csv` (출처별·공통 임계값과 dev F1), `results/experiments.csv` (`threshold_mode` = per_source / common 별 지표).

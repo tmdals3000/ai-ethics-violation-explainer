@@ -1,0 +1,4 @@
+prompt_version,source,per_source_threshold,per_source_dev_f1,common_threshold,common_mean_dev_f1
+team_v1,do_not_answer,0.6,0.0848,0.01,0.5392
+team_v1,jigsaw,0.15,0.7385,0.01,0.5392
+team_v1,prosocial,0.01,0.85,0.01,0.5392
