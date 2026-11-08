@@ -14,7 +14,7 @@
 | A-sim | similarity | 조교 파일 없음 → all-roberta-large-v1 코사인 유사도. 노드 쪽은 `rule_text`, 텍스트 쪽은 DNA 만 `질문 + 응답` (응답 대부분이 거절문이라 응답만으로는 주제를 알기 어려움) | `retrieval.embed_with_context` |
 | A-coords | coords | 조교 파일 없음 → 텍스트 임베딩 PCA 2차원 | `src/retrieval.py` |
 | A-bfs | BFS | 대분류는 모두 비교, 중분류만 τ 이상 유지(모두 τ 미만이면 최고 1개 유지), 유지한 중분류의 소분류를 모두 비교. 후보 = 도달한 잎을 유사도 순으로. 효율 = 비교한 노드 수 / 전체 노드 수(78) | `retrieval.tau`, `tau_levels` |
-| A-tau | τ | **현재 설정 0.15 (잠정).** 아래 'τ 결정 기록' 참고. dev τ별 비교표: `results/p1/tau_comparison.csv` | `retrieval.tau`, `tau_grid` |
+| A-tau | τ | **0.15 고정 (잠정 기준: DNA dev 효율 ≤ 0.4 중 top-1 최대, 멘토링에서 확정).** 아래 'τ 결정 기록' 참고. dev τ별 비교표: `results/p1/tau_comparison.csv` | `retrieval.tau`, `tau_grid` |
 | A-boundary | 경계 사례 | τ−0.02 또는 τ+0.02 에서 top-1 규칙이 바뀌는 텍스트 | `retrieval.boundary_delta` |
 | A-excluded | 규칙 제외 조건 | PDF 에 따라 DNA 위해 유형 12개, Jigsaw 규칙 2개. 각 텍스트에서 **자기 정답 위해 유형(중분류) 전체**를 트리에서 빼고 BFS → 상위 5개 후보로 판정 | `retrieval.excluded_for` |
 | A-agg | base 집계 | 상위 5개 후보마다 판정 → 위반 확률 최댓값. 후보별 행은 `judgments.csv` 에, 집계 행은 `candidate_rule_id=AGG:max` | `judge.aggregation` |
@@ -45,4 +45,5 @@
    | 0.30 | 0.337 | 0.468 | 0.497 | 0.293 | 70 |
 
    top-1 은 τ 가 낮을수록 계속 올라간다(τ 가 낮으면 가지를 덜 잘라 더 많은 노드를 비교하므로). 그래서 'top-1 최대' 규칙만 쓰면 격자의 끝(0.10)이 뽑히고, 격자를 넓히면 가지치기를 안 하는 τ = 0 쪽으로 간다. 코드의 선택 규칙(`retrieval.tau_comparison`: top-1 최대, 같으면 효율 값이 작은 쪽)은 0.10 을 고른다.
-3. **결정 대기:** 정확도와 효율 사이의 기준(예: 효율 ≤ 0.4 안에서 top-1 최대 → 0.15)을 정해야 한다. 정할 때까지 0.15 유지.
+3. **잠정 기준 (2026-11-08, 멘토링에서 확정할 임시 기준):** "DNA dev 전체에서 효율 ≤ 0.4 인 τ 중 top-1 최대 (같으면 효율이 작은 쪽)". 이 기준으로 **τ = 0.15 고정** (top-1 0.372, top-3 0.553, 효율 0.398). 0.10 은 top-1 이 더 높지만 효율 0.506 > 0.4 라 제외. 규칙은 `retrieval.tau_selection` 설정과 `retrieval.tau_comparison` 코드에 들어 있고, 다시 실행해 설정값과 다르면 경고가 뜬다.
+4. **τ 가 바뀌면 다시 계산할 것:** BFS 후보(`results/p1/*`) → 규칙을 받는 모델(ShieldGemma·팀)의 `base`·`rule_excluded` 판정 → 팀 판정기 임계값(base 로 고름) → P2·P3·P4 전체. 다시 계산하지 않아도 되는 것: 유사도·coords, Llama Guard·Qwen3Guard 판정(규칙을 안 받음), `rule_only`·`rule_plus_examples` 판정(정답 규칙만 씀). 이미 판정한 후보는 캐시에서 재사용하므로 새로 생긴 (텍스트, 후보) 쌍만 계산한다.

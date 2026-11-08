@@ -32,3 +32,11 @@ def test_excluded_and_divergence():
     assert first_divergence(["A", "A1", "A1b"], ["A", "A1", "A1a"]) == "소"
     assert first_divergence(["B", "B1"], ["A", "A1", "A1a"]) == "대"
     assert first_divergence(["A", "A1", "A1a"], ["A", "A1", "A1a"]) == "none"
+
+
+def test_tau_selection_respects_efficiency_cap():
+    from src.retrieval import tau_comparison
+    sweep = pd.DataFrame({"source": "do_not_answer", "tau": [.10, .15, .20],
+                          "top1_acc": [.39, .37, .35], "efficiency_mean": [.51, .398, .33]})
+    _, best = tau_comparison(sweep, .15, {"source": "do_not_answer", "max_efficiency": 0.4})
+    assert best == .15  # 0.10 은 top-1 이 더 높지만 효율 0.51 > 0.4 라 제외

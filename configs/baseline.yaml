@@ -26,7 +26,10 @@ data:
 
 retrieval:
   encoder: sentence-transformers/all-roberta-large-v1
-  tau: 0.15                     # 중분류를 남기는 유사도 임계값. dev 50건 tau_sweep 에서 top-1 최고(0.42)로 선택
+  tau: 0.15                     # 중분류를 남기는 유사도 임계값. 아래 tau_selection 규칙으로 고른 값 (멘토링에서 확정할 임시 기준)
+  tau_selection:                # 잠정 기준: 이 출처 dev 전체에서 효율 ≤ max_efficiency 인 τ 중 top-1 최대
+    source: do_not_answer
+    max_efficiency: 0.4
   tau_levels: [2]               # τ를 적용할 단계 (1=대, 2=중)
   boundary_delta: 0.02          # τ±δ 에서 top-1이 바뀌면 경계 사례
   tau_grid: [0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40]
