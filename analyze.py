@@ -172,46 +172,25 @@ for g in ["rule_l1", "rule_l2", "response_llm"]:
     t.round(4).to_csv(f"results/p2_errors_by_{g}.csv", index=False)
 
 # ---------------------------------------------------------------
-# 3) P3: 잘못된 판정 원인 진단 (위에서부터 처음 해당하는 하나만)
-#    1. 규칙 찾기 문제 : 정답 소분류가 BFS 상위 5개 후보에 없음
-#    2. 라벨 확인 필요 : 모든 모델이 같은 답인데 사람 라벨만 다름
-#    3. 규칙 문장 문제 : 정답 규칙 문장을 넣은 ShieldGemma 가 틀림
-#    4. 판정 모델 문제 : 정답 규칙을 넣은 ShieldGemma 는 맞는데 다른 모델이 틀림
-#    ※ 데모 한계: 팀 판정기가 없어서 3·4번은 ShieldGemma(rule_only) 하나로만 판단
-#                 1번의 '함께 찾은 다른 규칙 때문에 판정이 바뀜'은 base 후보별 판정이 없어 생략
+# 3) P3: 잘못된 판정 원인 진단 — 모델마다 따로 (규칙은 diagnose.py 참고)
 # ---------------------------------------------------------------
-rule_judges = [c for c in judges if "rule_only" in c]
-preds = (m[judges] >= THRESHOLD).astype(int)
-wrong_any = (preds.ne(m["human_harmful"], axis=0)).any(axis=1)
-d = m[["text_id", "human_harmful"]].copy()
-d = d.merge(p1[["text_id", "top5_correct", "top1", "candidates"]], on="text_id")
-for c in judges:
-    d[c] = m[c].values
-d["n_wrong"] = preds.ne(m["human_harmful"], axis=0).sum(axis=1).values
-d["all_agree"] = (preds.nunique(axis=1) == 1).values
-d["is_error"] = wrong_any.values
+from diagnose import diagnose, CAUSES
 
-
-def cause(r):
-    if not r["is_error"]:
-        return "정상 판정"
-    if r["top5_correct"] == 0:
-        return "1. 규칙 찾기 문제"
-    if r["all_agree"]:
-        return "2. 라벨 확인 필요"
-    if rule_judges and any(int(r[c] >= THRESHOLD) != r["human_harmful"] for c in rule_judges):
-        return "3. 규칙 문장 문제"
-    return "4. 판정 모델 문제"
-
-
-d["cause"] = d.apply(cause, axis=1)
+gold_in_topk = dict(zip(p1["text_id"], p1["top5_correct"].astype(bool)))
+d = diagnose(m, judges, THRESHOLD, gold_in_topk)
 coords = pd.read_csv("coords.csv")
 d = d.merge(coords, on="text_id", how="left")
 d.to_csv("results/p3_diagnosis.csv", index=False)
-summary = d["cause"].value_counts().rename_axis("cause").reset_index(name="n")
-summary.to_csv("results/p3_cause_summary.csv", index=False)
-print("\nP3 원인별 건수:")
-print(summary.to_string(index=False))
+
+summary = d.pivot_table(index="judge", columns="cause", values="text_id", aggfunc="count", fill_value=0)
+summary = summary.reindex(columns=CAUSES, fill_value=0)
+summary["합계"] = summary.sum(axis=1)
+summary.loc["합계"] = summary.sum()
+summary.to_csv("results/p3_cause_summary.csv")
+print("\nP3 원인별 잘못된 판정 수 (모델별):")
+print(summary.to_string())
+print(f"  (참고) 잘못된 판정 중 정답 규칙이 상위 {TOP_K}개 후보 밖인 경우: {int(d.gold_outside_topk.sum())}건"
+      " — 규칙을 입력받는 모델의 base 판정이 없어 원인 1로는 세지 않음")
 
 # ---------------------------------------------------------------
 # 4) 승민 님 결과와 비교 (같은 텍스트끼리 짝지어서)

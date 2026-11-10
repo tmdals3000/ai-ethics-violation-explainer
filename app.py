@@ -8,12 +8,13 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 import streamlit as st
+from diagnose import diagnose, CAUSES, takes_rules, uses_gold_rule
 from sklearn.metrics import roc_auc_score, average_precision_score, f1_score, cohen_kappa_score
 
 st.set_page_config(page_title="AI 윤리 판정 설명", layout="wide")
 MIN_N = 10
 CAUSE_COLORS = {"1. 규칙 찾기 문제": "#d1495b", "2. 라벨 확인 필요": "#edae49",
-                "3. 규칙 문장 문제": "#00798c", "4. 판정 모델 문제": "#7b4fa0", "정상 판정": "#c9c9c9"}
+                "3. 규칙 문장 문제": "#00798c", "4. 판정 모델 문제": "#7b4fa0"}
 
 
 # ---------------------------------------------------------------
@@ -28,13 +29,13 @@ def load():
     j = pd.read_csv("judgments.csv")
     j["judge_cond"] = j["judge"] + " / " + j["condition"]
     wide = j.pivot_table(index="text_id", columns="judge_cond", values="p_violation")
-    diag = pd.read_csv("results/p3_diagnosis.csv")
     p1 = pd.read_csv("results/p1_retrieval.csv")
     tau_sweep = pd.read_csv("results/p1_tau_sweep.csv")
-    return df, rules, sim, wide, diag, p1, tau_sweep
+    coords = pd.read_csv("coords.csv")
+    return df, rules, sim, wide, p1, tau_sweep, coords
 
 
-df, rules, sim, wide, diag, p1_saved, tau_sweep = load()
+df, rules, sim, wide, p1_saved, tau_sweep, coords = load()
 JUDGES = list(wide.columns)
 name_of = dict(zip(rules["node_id"], rules["name"]))
 children = rules.groupby("parent")["node_id"].apply(list).to_dict()
@@ -249,55 +250,60 @@ with tab2:
 
 
 # ---------------------------------------------------------------
-# P3 오판 원인
+# P3 오판 원인 (모델마다 따로 진단 — 규칙은 diagnose.py)
 # ---------------------------------------------------------------
 with tab3:
-    st.caption("원인 규칙은 위에서부터 처음 해당하는 하나만 적용: 1 규칙 찾기 → 2 라벨 확인 → 3 규칙 문장 → 4 판정 모델 "
-               "(데모 한계: 팀 판정기가 없어 3·4번은 ShieldGemma(rule_only) 하나로 판단)")
-    k = st.slider("규칙 찾기 문제 기준: 정답 규칙이 상위 몇 개 안에 없으면?", 1, 10, 5)
-    d = diag[diag.text_id.isin(view.text_id)].copy()
+    st.caption("잘못된 판정 하나 = (텍스트, 판정 모델) 한 쌍. 위에서부터 처음 해당하는 원인 하나만: "
+               "1 규칙 찾기 → 2 라벨 확인 → 3 규칙 문장 → 4 판정 모델")
+    k = st.slider("규칙 찾기 문제 기준: 정답 규칙이 상위 몇 개 후보 안에 없으면?", 1, 10, 5)
+    # 임계값(사이드바)·k·τ(P1 탭)가 바뀌면 바로 다시 진단
+    vm3 = view[["text_id", "human_harmful"]].reset_index(drop=True)
+    for jc in judges:
+        vm3[jc] = wide.loc[vm3.text_id, jc].values
+    gold_l3 = view.set_index("text_id")["gold_l3"]
+    gold_in_topk = {tid: gold_l3[tid] in bfs(sim.loc[tid], tau)[0][:k] for tid in vm3.text_id}
+    d = diagnose(vm3, judges, threshold, gold_in_topk).merge(coords, on="text_id", how="left")
+    if not any(takes_rules(j) and not uses_gold_rule(j) for j in judges):
+        st.info("데모 한계: 규칙을 입력받는 모델이 BFS 후보 규칙으로 판정한 결과(base)가 없어서 원인 1은 0건이에요. "
+                f"대신 정답 규칙이 상위 {k}개 후보 밖인 잘못된 판정은 지도에서 ◆ 로 표시했어요.")
 
-    def gold_in_topk(tid):
-        g = df.loc[df.text_id == tid, "gold_l3"].iloc[0]
-        ranked, _, _ = bfs(sim.loc[tid], tau)   # P1 탭의 τ 와 같은 값
-        return g in ranked[:k]
+    st.subheader("판정 모델 × 원인 (잘못된 판정 수)")
+    tbl = d.pivot_table(index="judge", columns="cause", values="text_id", aggfunc="count", fill_value=0) \
+        .reindex(columns=CAUSES, fill_value=0) if len(d) else pd.DataFrame(columns=CAUSES)
+    tbl["합계"] = tbl.sum(axis=1)
+    st.dataframe(tbl, width="stretch")
 
-    # 기준(k)이 바뀌면 원인을 바로 다시 계산
-    pj = (d[judges] >= threshold).astype(int)
-    d["is_error"] = pj.ne(d["human_harmful"], axis=0).any(axis=1)
-    d["all_agree"] = pj.nunique(axis=1) == 1
-    rule_j = [c for c in judges if "rule_only" in c]
-    topk = {tid: gold_in_topk(tid) for tid in d.text_id[d.is_error]}
-
-    def cause(r):
-        if not r.is_error:
-            return "정상 판정"
-        if not topk[r.text_id]:
-            return "1. 규칙 찾기 문제"
-        if r.all_agree:
-            return "2. 라벨 확인 필요"
-        if rule_j and any(int(r[c] >= threshold) != r.human_harmful for c in rule_j):
-            return "3. 규칙 문장 문제"
-        return "4. 판정 모델 문제"
-
-    d["cause"] = d.apply(cause, axis=1)
-    show_ok = st.checkbox("정상 판정도 지도에 표시", value=False)
-    dm = d if show_ok else d[d.cause != "정상 판정"]
+    jsel = st.selectbox("지도에 표시할 판정 모델", judges, key="p3_judge")
+    dj = d[d.judge == jsel].copy()
     left, right = st.columns([3, 2])
     with left:
-        dm = dm.assign(크기=np.where(dm.text_id == sel, 16, 6))
-        fig = px.scatter(dm, x="x", y="y", color="cause", size="크기", size_max=16,
-                         color_discrete_map=CAUSE_COLORS, custom_data=["text_id"], opacity=0.8)
+        base_pts = coords[coords.text_id.isin(view.text_id) & ~coords.text_id.isin(dj.text_id)]
+        fig = px.scatter(base_pts, x="x", y="y", opacity=0.15)
+        fig.update_traces(marker=dict(color="#c9c9c9", size=4), name="맞은 판정", showlegend=True,
+                          hoverinfo="skip")
+        dj["모양"] = np.where(dj.gold_outside_topk == 1, "정답 규칙 상위 k 밖", "정답 규칙 상위 k 안")
+        fig2 = px.scatter(dj, x="x", y="y", color="cause", symbol="모양",
+                          color_discrete_map=CAUSE_COLORS, custom_data=["text_id"],
+                          symbol_map={"정답 규칙 상위 k 밖": "diamond", "정답 규칙 상위 k 안": "circle"},
+                          hover_data={"text_id": True, "p_violation": ":.3f", "error_type": True,
+                                      "x": False, "y": False})
+        fig2.update_traces(marker=dict(size=8, opacity=0.85))
+        for tr in fig2.data:
+            fig.add_trace(tr)
+        if sel and sel in set(coords.text_id):   # 선택한 텍스트는 검은 테두리로 강조
+            c = coords[coords.text_id == sel]
+            fig.add_scatter(x=c.x, y=c.y, mode="markers", name="선택한 텍스트", hoverinfo="skip",
+                            marker=dict(size=18, color="rgba(0,0,0,0)", line=dict(width=3, color="black")))
         fig.update_layout(height=520, xaxis_visible=False, yaxis_visible=False, legend_title=None)
         ev = st.plotly_chart(fig, width="stretch", on_select="rerun",
                              selection_mode=("points", "box", "lasso"), key="p3_map")
-        st.caption("비슷한 텍스트끼리 가깝게 놓인 지도예요 · 점 클릭 = 선택 · 상자/올가미로 영역 선택")
-    sel_ids = [p["customdata"][0] for p in ev.selection.points] if ev and ev.selection.points else []
+        st.caption("비슷한 텍스트끼리 가깝게 놓인 지도 · 회색 = 이 모델이 맞힌 텍스트 · 점 클릭 = 선택 · 상자/올가미로 영역 선택")
+    sel_ids = [p["customdata"][0] for p in ev.selection.points if p.get("customdata")] if ev and ev.selection.points else []
     with right:
-        area = d[d.text_id.isin(sel_ids)] if len(sel_ids) > 1 else d[d.cause != "정상 판정"]
-        st.subheader("원인별 건수" + (" (선택 영역)" if len(sel_ids) > 1 else " (오판 전체)"))
-        cnt = area.cause.value_counts().rename_axis("원인").reset_index(name="건수")
-        cnt["비율"] = (cnt.건수 / cnt.건수.sum()).round(3)
+        area = dj[dj.text_id.isin(sel_ids)] if len(sel_ids) > 1 else dj
+        st.subheader(("선택 영역" if len(sel_ids) > 1 else "전체") + f" 원인 분포 — {jsel}")
+        cnt = area.cause.value_counts().reindex(CAUSES, fill_value=0).rename_axis("원인").reset_index(name="건수")
+        cnt["비율"] = (cnt.건수 / max(cnt.건수.sum(), 1)).round(3)
         fig = px.bar(cnt, x="건수", y="원인", orientation="h", color="원인", text="건수",
                      color_discrete_map=CAUSE_COLORS)
         fig.update_layout(height=260, showlegend=False, margin=dict(t=10, l=0, r=0, b=0), yaxis_title=None)
@@ -305,14 +311,20 @@ with tab3:
         st.dataframe(cnt, hide_index=True, width="stretch")
     if len(sel_ids) == 1:
         select(sel_ids[0])
-    if sel and sel in d.text_id.values:
-        r = d[d.text_id == sel].iloc[0]
-        st.subheader(f"진단 — {sel}: {r.cause}")
-        st.dataframe(pd.DataFrame({"판정 모델": judges, "위반 확률": [round(r[c], 4) for c in judges],
-                                   "판정": ["위반" if r[c] >= threshold else "정상" for c in judges]}),
-                     hide_index=True)
-        st.caption("PDF 의 4가지 조건(기본·규칙 제외·규칙 문장만·규칙+예시) 중 데모에는 '기본'(Llama Guard·Qwen3Guard)과 "
-                   "'규칙 문장만'(ShieldGemma)만 있어요")
+    if sel:
+        st.subheader(f"진단 — {sel}")
+        rs = vm3[vm3.text_id == sel]
+        if len(rs):
+            r = rs.iloc[0]
+            ds = d[d.text_id == sel].set_index("judge")
+            st.dataframe(pd.DataFrame({
+                "판정 모델": judges,
+                "위반 확률": [round(r[c], 4) for c in judges],
+                "판정": ["위반" if r[c] >= threshold else "정상" for c in judges],
+                "맞음": ["✗" if c in ds.index else "✓" for c in judges],
+                "원인": [ds.loc[c, "cause"] if c in ds.index else "" for c in judges]}), hide_index=True)
+            st.caption("PDF 의 4가지 조건(기본·규칙 제외·규칙 문장만·규칙+예시) 중 데모에는 '기본'(Llama Guard·Qwen3Guard)과 "
+                       "'규칙 문장만'(ShieldGemma)만 있어요")
         show_text(sel, "p3_text")
 
 
