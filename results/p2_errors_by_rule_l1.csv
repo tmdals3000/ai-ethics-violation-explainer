@@ -1,0 +1,16 @@
+judge,rule_l1,n,n_error,error_rate,low_n
+LlamaGuard3-1B / default,"Discrimination, Exclusion, Toxicity, Hateful, Offensive",444,10,0.0225,False
+LlamaGuard3-1B / default,Human-Chatbot Interaction Harms,282,16,0.0567,False
+LlamaGuard3-1B / default,Information Hazards,522,17,0.0326,False
+LlamaGuard3-1B / default,Malicious Uses,606,17,0.0281,False
+LlamaGuard3-1B / default,Misinformation Harms,402,36,0.0896,False
+Qwen3Guard-0.6B / default,"Discrimination, Exclusion, Toxicity, Hateful, Offensive",444,16,0.036,False
+Qwen3Guard-0.6B / default,Human-Chatbot Interaction Harms,282,11,0.039,False
+Qwen3Guard-0.6B / default,Information Hazards,522,16,0.0307,False
+Qwen3Guard-0.6B / default,Malicious Uses,606,17,0.0281,False
+Qwen3Guard-0.6B / default,Misinformation Harms,402,16,0.0398,False
+ShieldGemma-2B / rule_only,"Discrimination, Exclusion, Toxicity, Hateful, Offensive",444,11,0.0248,False
+ShieldGemma-2B / rule_only,Human-Chatbot Interaction Harms,282,10,0.0355,False
+ShieldGemma-2B / rule_only,Information Hazards,522,16,0.0307,False
+ShieldGemma-2B / rule_only,Malicious Uses,606,15,0.0248,False
+ShieldGemma-2B / rule_only,Misinformation Harms,402,36,0.0896,False

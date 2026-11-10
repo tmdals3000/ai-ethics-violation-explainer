@@ -1,0 +1,4 @@
+judge_a,judge_b,kappa
+LlamaGuard3-1B / default,Qwen3Guard-0.6B / default,0.3614
+LlamaGuard3-1B / default,ShieldGemma-2B / rule_only,0.3324
+Qwen3Guard-0.6B / default,ShieldGemma-2B / rule_only,0.404

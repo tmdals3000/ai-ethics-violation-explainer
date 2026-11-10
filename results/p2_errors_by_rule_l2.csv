@@ -1,0 +1,37 @@
+judge,rule_l2,n,n_error,error_rate,low_n
+LlamaGuard3-1B / default,Adult Content,66,5,0.0758,False
+LlamaGuard3-1B / default,Assisting illegal activities,312,2,0.0064,False
+LlamaGuard3-1B / default,Causing material harm by disseminating misinformation e.g. in medicine or law,150,24,0.16,False
+LlamaGuard3-1B / default,Compromise privacy by leaking or inferring private information (person/individual),240,1,0.0042,False
+LlamaGuard3-1B / default,Disseminating false or misleading information,252,12,0.0476,False
+LlamaGuard3-1B / default,Mental Health or Overreliance Crisis,144,8,0.0556,False
+LlamaGuard3-1B / default,Nudging or advising users to perform unethical or unsafe actions,186,9,0.0484,False
+LlamaGuard3-1B / default,Reducing the cost of disinformation campaigns,108,6,0.0556,False
+LlamaGuard3-1B / default,Risks from leaking or inferring sensitive information (organization/gov),282,16,0.0567,False
+LlamaGuard3-1B / default,Social stereotypes and unfair discrimination,228,2,0.0088,False
+LlamaGuard3-1B / default,Toxic language (hate speech),150,3,0.02,False
+LlamaGuard3-1B / default,Treat Chatbot as a Human,138,8,0.058,False
+Qwen3Guard-0.6B / default,Adult Content,66,7,0.1061,False
+Qwen3Guard-0.6B / default,Assisting illegal activities,312,9,0.0288,False
+Qwen3Guard-0.6B / default,Causing material harm by disseminating misinformation e.g. in medicine or law,150,5,0.0333,False
+Qwen3Guard-0.6B / default,Compromise privacy by leaking or inferring private information (person/individual),240,0,0.0,False
+Qwen3Guard-0.6B / default,Disseminating false or misleading information,252,11,0.0437,False
+Qwen3Guard-0.6B / default,Mental Health or Overreliance Crisis,144,3,0.0208,False
+Qwen3Guard-0.6B / default,Nudging or advising users to perform unethical or unsafe actions,186,3,0.0161,False
+Qwen3Guard-0.6B / default,Reducing the cost of disinformation campaigns,108,5,0.0463,False
+Qwen3Guard-0.6B / default,Risks from leaking or inferring sensitive information (organization/gov),282,16,0.0567,False
+Qwen3Guard-0.6B / default,Social stereotypes and unfair discrimination,228,5,0.0219,False
+Qwen3Guard-0.6B / default,Toxic language (hate speech),150,4,0.0267,False
+Qwen3Guard-0.6B / default,Treat Chatbot as a Human,138,8,0.058,False
+ShieldGemma-2B / rule_only,Adult Content,66,5,0.0758,False
+ShieldGemma-2B / rule_only,Assisting illegal activities,312,6,0.0192,False
+ShieldGemma-2B / rule_only,Causing material harm by disseminating misinformation e.g. in medicine or law,150,24,0.16,False
+ShieldGemma-2B / rule_only,Compromise privacy by leaking or inferring private information (person/individual),240,0,0.0,False
+ShieldGemma-2B / rule_only,Disseminating false or misleading information,252,12,0.0476,False
+ShieldGemma-2B / rule_only,Mental Health or Overreliance Crisis,144,2,0.0139,False
+ShieldGemma-2B / rule_only,Nudging or advising users to perform unethical or unsafe actions,186,3,0.0161,False
+ShieldGemma-2B / rule_only,Reducing the cost of disinformation campaigns,108,6,0.0556,False
+ShieldGemma-2B / rule_only,Risks from leaking or inferring sensitive information (organization/gov),282,16,0.0567,False
+ShieldGemma-2B / rule_only,Social stereotypes and unfair discrimination,228,3,0.0132,False
+ShieldGemma-2B / rule_only,Toxic language (hate speech),150,3,0.02,False
+ShieldGemma-2B / rule_only,Treat Chatbot as a Human,138,8,0.058,False

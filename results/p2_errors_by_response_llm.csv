@@ -1,0 +1,19 @@
+judge,response_llm,n,n_error,error_rate,low_n
+LlamaGuard3-1B / default,ChatGLM2,376,38,0.1011,False
+LlamaGuard3-1B / default,ChatGPT,376,10,0.0266,False
+LlamaGuard3-1B / default,Claude,376,12,0.0319,False
+LlamaGuard3-1B / default,GPT4,376,10,0.0266,False
+LlamaGuard3-1B / default,llama2-7b-chat,376,5,0.0133,False
+LlamaGuard3-1B / default,vicuna-7b,376,21,0.0559,False
+Qwen3Guard-0.6B / default,ChatGLM2,376,36,0.0957,False
+Qwen3Guard-0.6B / default,ChatGPT,376,7,0.0186,False
+Qwen3Guard-0.6B / default,Claude,376,5,0.0133,False
+Qwen3Guard-0.6B / default,GPT4,376,7,0.0186,False
+Qwen3Guard-0.6B / default,llama2-7b-chat,376,3,0.008,False
+Qwen3Guard-0.6B / default,vicuna-7b,376,18,0.0479,False
+ShieldGemma-2B / rule_only,ChatGLM2,376,36,0.0957,False
+ShieldGemma-2B / rule_only,ChatGPT,376,8,0.0213,False
+ShieldGemma-2B / rule_only,Claude,376,10,0.0266,False
+ShieldGemma-2B / rule_only,GPT4,376,10,0.0266,False
+ShieldGemma-2B / rule_only,llama2-7b-chat,376,4,0.0106,False
+ShieldGemma-2B / rule_only,vicuna-7b,376,20,0.0532,False

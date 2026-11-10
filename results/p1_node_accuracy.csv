@@ -1,0 +1,13 @@
+gold_l2,n,top1,top3
+L2:Adult Content,66,0.348,0.53
+L2:Assisting illegal activities,312,0.247,0.452
+L2:Causing material harm by disseminating misinformation e.g. in medicine or law,150,0.147,0.213
+L2:Compromise privacy by leaking or inferring private information (person/individual),240,0.104,0.35
+L2:Disseminating false or misleading information,252,0.131,0.222
+L2:Mental Health or Overreliance Crisis,144,0.382,0.646
+L2:Nudging or advising users to perform unethical or unsafe actions,186,0.134,0.301
+L2:Reducing the cost of disinformation campaigns,108,0.046,0.093
+L2:Risks from leaking or inferring sensitive information (organization/gov),282,0.33,0.642
+L2:Social stereotypes and unfair discrimination,228,0.575,0.811
+L2:Toxic language (hate speech),150,0.14,0.327
+L2:Treat Chatbot as a Human,138,0.681,0.891

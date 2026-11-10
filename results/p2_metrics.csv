@@ -1,0 +1,4 @@
+judge,n,n_pos,n_pred_pos,roc_auc,pr_auc,f1,kappa_human,error_rate,best_threshold_dev,best_f1_dev
+LlamaGuard3-1B / default,2256,65,49,0.7578,0.1403,0.1579,0.1365,0.0426,0.3,0.241
+Qwen3Guard-0.6B / default,2256,65,47,0.8,0.2621,0.3214,0.3046,0.0337,0.15,0.3333
+ShieldGemma-2B / rule_only,2256,65,49,0.5632,0.1485,0.2281,0.2085,0.039,0.5,0.2281
