@@ -20,14 +20,30 @@ CAUSE = {"retrieval": "규칙 찾기", "label_check": "라벨 확인", "rule_tex
          "unclassified": "unclassified"}
 COLS = ["version", "run_id", "date", "commit", "split", "table", "source", "model", "metric", "value", "note"]
 
-# 실행 시간: 로그에서 잰 값 (results/model_status.csv, results/timings.csv, 실행 로그)
-TIMES = [
+# 실행 시간: 로그에서 잰 값. baseline-v0 은 여러 번 나눠 돌린 로그를 손으로 합산한 값이라 그대로 적어 둔다.
+# 그 뒤 version 은 results/timings.csv (마지막 실행) 와 results/model_status.csv 에서 읽는다 (times_from_files).
+TIMES_V0 = [
     ("R1", "all-roberta-large-v1", "similarity 2,356 텍스트 × 81 노드", None, 93.4, "timings.csv p1"),
     ("B-LG", "llama_guard", "판정", 2355, 91, "실행 로그"),
     ("B-QG", "qwen3guard", "판정", 2206, 170, "실행 로그 (DNA dev 전체 첫 계산)"),
     ("B-SG", "shieldgemma", "판정", 15507, 3380, "5번 나눠 실행한 로그 합산(15+7+18+14+2.4분), 근사"),
     ("T1", "team", "판정", 15507, 1359.4, "model_status.csv (길이 기반 배치 적용 후)"),
 ]
+
+
+def times_from_files(cfg):
+    """마지막 실행의 단계별 시간(timings.csv)과 모델별 새 forward 수·시간(model_status.csv). 캐시에 있던 판정은 다시 계산하지 않는다."""
+    res, out = cfg["_res"], []
+    tm = read_csv_safe(res / "timings.csv")
+    if len(tm):
+        last = tm.groupby("step").tail(1)
+        for r in last.itertuples():
+            out.append((f"step:{r.step}", r.step, "단계 전체 (마지막 실행)", None, float(r.seconds), f"timings.csv {r.timestamp}; {r.dev_sample}"))
+    st = read_csv_safe(res / "model_status.csv")
+    for r in st[st.status == "ok"].itertuples() if len(st) else []:
+        out.append((RUN_ID.get(r.model, r.model), r.model, "판정 (캐시에 없던 것만 새로 계산)", int(r.n_new_forward), float(r.seconds),
+                    f"model_status.csv; 전체 프롬프트 {int(r.n_prompts):,}"))
+    return out
 
 
 def build_rows(cfg, version, date, commit):
@@ -46,7 +62,8 @@ def build_rows(cfg, version, date, commit):
         if mo == "team" and len(th):
             t = th[th.prompt_version == "team_v1"]
             add(rid, "setup", "", mo, "threshold", " / ".join(f"{SRC[s]} {v:g}" for s, v in zip(t.source, t.per_source_threshold)))
-            add(rid, "setup", "", mo, "threshold_rule", "출처별 dev F1(위반) 최대, 격자 0.01")
+            crit = t.criterion.iloc[0] if "criterion" in t and len(t) else "f1"
+            add(rid, "setup", "", mo, "threshold_rule", f"출처별 dev {'κ(사람 라벨)' if crit == 'kappa' else 'F1(위반)'} 최대, 격자 0.01")
         else:
             add(rid, "setup", "", mo, "threshold", f"{cfg['judge']['default_threshold']:g}")
             add(rid, "setup", "", mo, "threshold_rule", "고정 0.5")
@@ -75,8 +92,25 @@ def build_rows(cfg, version, date, commit):
                 rule_free = c == "retrieval" and not cfg["judge"]["models"][mo]["uses_rules"]
                 add(RUN_ID[mo], "p3", src, mo, c, "n/a" if rule_free else n.get((src, mo, c), 0),
                     "규칙을 받지 않는 모델에는 적용 안 함" if rule_free else "")
+    # P4 (있으면): 처음 보는 규칙 AUC 하락폭·회복폭, 설정을 바꿨을 때 뒤집힌 판정 수
+    adr = read_csv_safe(res / "p4/auc_drop_recovery.csv")
+    for r in adr[adr.group_by == "source"].itertuples() if len(adr) else []:
+        for k in ["auc_base", "auc_rule_excluded", "auc_rule_only", "auc_rule_plus_examples", "auc_drop",
+                  "recovery_rule_only", "recovery_rule_plus_examples"]:
+            add(RUN_ID[r.model], "p4_auc", r.group, r.model, k, getattr(r, k))
+    import json
+    for f in sorted((res / "rule_proposals").glob("*.json")):
+        pr = json.loads(f.read_text(encoding="utf-8"))
+        kind = pr.get("name", "").split("_")[0]
+        if kind not in ("threshold", "priority", "tau"):
+            continue  # 규칙 개선안(proposal_*) 은 실험 version 에서 따로 기록
+        mo = pr["change"]["model"]
+        what = {"threshold": f"임계값 → {pr['change']['threshold'][1]}", "priority": f"집계 → {pr['change'].get('aggregation', ['', ''])[1]}",
+                "tau": f"τ → {pr['change'].get('tau', ['', ''])[1]}"}[kind]
+        for k in ["n_flipped", "n_fixed", "n_broken"]:
+            add(RUN_ID[mo], "p4_flip", "", mo, k, pr[k], what)
     # 실행 시간
-    for rid, mo, what, n, sec, note in TIMES:
+    for rid, mo, what, n, sec, note in (TIMES_V0 if version == "baseline-v0" else times_from_files(cfg)):
         add(rid, "time", "", mo, "seconds", sec, f"{what}; n_forward={n}; {note}" if n else f"{what}; {note}")
     return pd.DataFrame(rows, columns=COLS)
 
@@ -138,6 +172,18 @@ def readme_block(cfg, version):
     kp = table(e[e.table == "kappa_pair"], ["run_id"], "출처", ["DNA", "Jigsaw", "PD"])
     p3e = e[e.table == "p3"].assign(metric=lambda x: x.metric.map(CAUSE))
     p3 = table(p3e, ["출처", "run_id"], "metric", list(CAUSE.values()))
+    n_src = e[(e.table == "p2") & (e.metric == "n")].groupby("출처").value.first()
+    sample = ", ".join(f"{k} {int(float(v)):,}건" for k, v in n_src.items())
+    p4a = e[e.table == "p4_auc"]
+    p4 = ""
+    if len(p4a):
+        p4 = "**P4 처음 보는 규칙** (정답 규칙이 있는 텍스트, 하락폭 = base − 규칙 제외, 회복폭 = 조건 − 규칙 제외)\n\n" + table(
+            p4a, ["출처", "run_id"], "metric", ["auc_base", "auc_rule_excluded", "auc_rule_only", "auc_rule_plus_examples",
+                                                "auc_drop", "recovery_rule_only", "recovery_rule_plus_examples"]) + "\n\n"
+    p4f = e[e.table == "p4_flip"].assign(변경=lambda x: x.note)
+    if len(p4f):
+        p4 += "**P4 설정 변경 시 뒤집힌 판정** (dev 전체 출처 합계, 맞게 = fixed, 틀리게 = broken)\n\n" + table(
+            p4f, ["run_id", "변경"], "metric", ["n_flipped", "n_fixed", "n_broken"]) + "\n\n"
     tm = e[e.table == "time"]
     tml = ["| run_id | 작업 | 시간 | 비고 |", "|---|---|---|---|"]
     for r in tm.itertuples():
@@ -146,8 +192,8 @@ def readme_block(cfg, version):
     return f"""<!-- results:{version} -->
 ### {version.replace('baseline-v', 'Baseline v')} (dev, {date})
 
-> ⚠ **모든 수치는 dev 결과다. test 는 아직 보지 않았다.** 검증 상태: `IS만` (임계값·τ 를 정한 dev 로 평가).
-> 표본: DNA dev 전체 2,256건, Jigsaw·ProsocialDialog dev 각 50건. split·규칙 트리는 임시([ASSUMPTIONS](docs/ASSUMPTIONS.md)).
+> ⚠ **모든 수치는 dev 결과다. test 는 아직 보지 않았다.** 검증 상태: `IS만` (In-Sample: 임계값·τ 를 정한 dev 로 평가해 낙관적).
+> 표본(dev): {sample}. split·규칙 트리는 임시([ASSUMPTIONS](docs/ASSUMPTIONS.md)).
 > 원자료: `results/experiments.csv` (version = `{version}`). 이 표는 `python scripts/record_run.py readme --version {version}` 로 만든다.
 
 **실험 설정**
@@ -170,7 +216,7 @@ def readme_block(cfg, version):
 
 {p3}
 
-**실행 시간** (RTX 3060 8GB)
+{p4}**실행 시간** (RTX 3060 8GB)
 
 {chr(10).join(tml)}
 <!-- /results:{version} -->"""

@@ -104,9 +104,9 @@ def run(cfg):
     if adr.empty:
         status.append("AUC 하락폭·회복폭: 규칙을 받는 모델(ShieldGemma/팀) 판정이 없어 계산 불가")
 
-    # (2) 판정 임계값 변경 — 대상 모델이 없으면 있는 모델로 대신 (표시)
+    # (2) 판정 임계값 변경 — 판정 결과가 있는 모든 모델 (4개)
     th_model = mo or (sorted(set(m.model))[0] if len(m) else None)
-    if th_model:
+    for th_model in sorted(set(m.model)):
         cur = m[(m.model == th_model) & (m.condition == "base") & (m.split == "dev")]
         for th in ec["alt_thresholds"]:
             after = cur.assign(prediction=(cur.p_violation >= th).astype(int))
@@ -127,11 +127,16 @@ def run(cfg):
     cur = main_rows(jj)
     cur = cur[(cur.condition == "base") & cur.text_id.isin(tgt.text_id)][["text_id", "p_violation", "prediction"]]
 
-    # (3) 우선순위(후보 집계) 변경: max → top1
-    agg = judges.aggregate(jj[jj.text_id.isin(tgt.text_id)], ec["alt_aggregation"])
-    agg = agg[agg.condition == "base"].assign(prediction=lambda x: (x.p_violation >= x.text_id.map(th)).astype(int))
-    save(cfg, compare(f"priority_{mo}_{ec['alt_aggregation']}", {"model": mo, "aggregation": [cfg["judge"]["aggregation"], ec["alt_aggregation"]]},
-                      cur, agg[["text_id", "p_violation", "prediction"]], meta))
+    # (3) 우선순위(후보 집계) 변경: max → top1 — 규칙을 받는 모델 (ShieldGemma, 팀)
+    for rm in [x for x in RULE_MODELS if x in set(j.model)]:
+        jr = j[(j.model == rm) & (j.prompt_version.astype(str) == (pv if rm == "team" else "official"))]
+        thr = per_text_threshold(jr)
+        cr = main_rows(jr)
+        cr = cr[(cr.condition == "base") & cr.text_id.isin(tgt.text_id)][["text_id", "p_violation", "prediction"]]
+        agg = judges.aggregate(jr[jr.text_id.isin(tgt.text_id)], ec["alt_aggregation"])
+        agg = agg[agg.condition == "base"].assign(prediction=lambda x: (x.p_violation >= x.text_id.map(thr)).astype(int))
+        save(cfg, compare(f"priority_{rm}_{ec['alt_aggregation']}", {"model": rm, "aggregation": [cfg["judge"]["aggregation"], ec["alt_aggregation"]]},
+                          cr, agg[["text_id", "p_violation", "prediction"]], meta))
 
     # (4) τ 변경 → 후보가 바뀌므로 팀 판정기로 다시 판정 (캐시 재사용)
     tree = retrieval.Tree(nodes)

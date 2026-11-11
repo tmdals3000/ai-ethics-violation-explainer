@@ -82,3 +82,29 @@ def test_token_budget_batches():
     b = token_budget_batches([100, 100, 100, 600, 900, 1600], max_batch=8, budget=2_000_000)
     assert b == [[0, 1, 2, 3], [4], [5]]  # 4×600²=1.44e6 ≤ 2e6, 5×900² > 2e6, 2×1600² > 2e6
     assert sum(map(len, b)) == 6 and all(len(x) <= 8 for x in b)
+
+
+def test_thresholds_kappa_criterion_differs_from_f1():
+    from src.judges import choose_thresholds
+    # 위반이 많은 출처: F1 은 '전부 위반' 쪽(낮은 임계값)이 유리, κ 는 실제로 가르는 0.5 근처를 고른다
+    p = [.1, .2, .3, .35, .6, .7, .8, .9, .95, .97]
+    y = [1, 1, 0, 0, 1, 1, 1, 1, 1, 1]  # 전부 위반: F1 0.889 > 0.46 기준 F1 0.857 / κ 는 0 vs 0.545
+    j = pd.DataFrame({"text_id": list("abcdefghij"), "p_violation": p})
+    texts = pd.DataFrame({"text_id": list("abcdefghij"), "source": "A", "split": "dev", "human_label": y})
+    cfg = {"judge": {"team_threshold_step": 0.01}}
+    f1 = choose_thresholds(cfg, j, texts, "f1")
+    ka = choose_thresholds(cfg, j, texts, "kappa")
+    assert f1["metric"] == "f1" and ka["metric"] == "kappa"
+    assert f1["per_source"]["A"][0] <= 0.1 and 0.35 < ka["per_source"]["A"][0] <= 0.6
+
+
+def test_team_v4_uses_compliance_for_response_and_v2_for_prompt():
+    from src.judges import TeamJudge
+
+    def build(pv, mode):
+        j = TeamJudge.__new__(TeamJudge)
+        j.prompt_version = pv
+        return j.build({"text": "T", "context": "C", "rule": "R", "mode": mode})
+    assert build("team_v4", "prompt") == build("team_v2", "prompt")
+    r = build("team_v4", "response")
+    assert "actually complies with or assists the request" in r and r != build("team_v2", "response")

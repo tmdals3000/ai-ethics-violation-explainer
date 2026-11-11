@@ -12,8 +12,8 @@ data:
   sources: [do_not_answer, jigsaw, prosocial]
   dev_sample_per_source:        # 출처별 dev 최대 건수. all = dev 전체
     do_not_answer: all          # 위반이 드물어(2.9%) 표본을 줄이면 PR-AUC·F1 이 불안정 → 전체. 위반 우선 추출은 하지 않음
-    jigsaw: 50
-    prosocial: 50
+    jigsaw: all                 # v1: dev 전체 783건
+    prosocial: 500              # v1: 라벨 비율 유지 500건
   stratify_sample: true         # 라벨 비율을 유지해 표본 추출 (치우친 추출 없음)
   split_ratio: {train: 0.2, dev: 0.4, test: 0.4}  # 임시 split (DNA·Jigsaw). train은 예시 후보로만 사용
   english_min_ascii_ratio: 0.9  # ProsocialDialog '영어만' 필터: 알파벳 중 ASCII 비율
@@ -50,6 +50,7 @@ judge:
     shieldgemma: {hf_id: google/shieldgemma-2b, uses_rules: true}
     team: {hf_id: google/shieldgemma-2b, uses_rules: true}
   team_prompt_versions: [team_v1]  # 확인 후 [team_v1, team_v2, team_v3]
+  team_threshold_metric: f1       # 팀 판정기 임계값을 고르는 기준: f1 | kappa (baseline-v1 까지 f1, exp-v1 부터 kappa)
   team_threshold_step: 0.01     # 팀 판정기 임계값 후보 격자 0.01–0.99. dev F1(위반) 최대를 출처별로 고름 (공통 임계값은 비교용)
   examples_per_label: 2         # rule_plus_examples 에서 위반·비위반 예시 수
 

@@ -1,0 +1,35 @@
+level,name,scope,n,n_violation,violation_rate
+risk_area,"Discrimination, Exclusion, Toxicity, Hateful, Offensive",all,1056,47,0.0445
+risk_area,Human-Chatbot Interaction Harms,all,702,21,0.0299
+risk_area,Information Hazards,all,1488,58,0.039
+risk_area,Malicious Uses,all,1458,32,0.0219
+risk_area,Misinformation Harms,all,930,35,0.0376
+risk_area,"Discrimination, Exclusion, Toxicity, Hateful, Offensive",dev,444,11,0.0248
+risk_area,Human-Chatbot Interaction Harms,dev,282,10,0.0355
+risk_area,Information Hazards,dev,522,18,0.0345
+risk_area,Malicious Uses,dev,606,12,0.0198
+risk_area,Misinformation Harms,dev,402,14,0.0348
+types_of_harm,Adult Content,all,168,32,0.1905
+types_of_harm,Assisting illegal activities,all,792,8,0.0101
+types_of_harm,Causing material harm by disseminating misinformation e.g. in medicine or law,all,378,8,0.0212
+types_of_harm,Compromise privacy by leaking or inferring private information (person/individual),all,672,5,0.0074
+types_of_harm,Disseminating false or misleading information,all,552,27,0.0489
+types_of_harm,Mental Health or Overreliance Crisis,all,402,9,0.0224
+types_of_harm,Nudging or advising users to perform unethical or unsafe actions,all,426,8,0.0188
+types_of_harm,Reducing the cost of disinformation campaigns,all,240,16,0.0667
+types_of_harm,Risks from leaking or inferring sensitive information (organization/gov),all,816,53,0.065
+types_of_harm,Social stereotypes and unfair discrimination,all,570,2,0.0035
+types_of_harm,Toxic language (hate speech),all,318,13,0.0409
+types_of_harm,Treat Chatbot as a Human,all,300,12,0.04
+types_of_harm,Adult Content,dev,66,6,0.0909
+types_of_harm,Assisting illegal activities,dev,312,1,0.0032
+types_of_harm,Causing material harm by disseminating misinformation e.g. in medicine or law,dev,150,2,0.0133
+types_of_harm,Compromise privacy by leaking or inferring private information (person/individual),dev,240,2,0.0083
+types_of_harm,Disseminating false or misleading information,dev,252,12,0.0476
+types_of_harm,Mental Health or Overreliance Crisis,dev,144,2,0.0139
+types_of_harm,Nudging or advising users to perform unethical or unsafe actions,dev,186,4,0.0215
+types_of_harm,Reducing the cost of disinformation campaigns,dev,108,7,0.0648
+types_of_harm,Risks from leaking or inferring sensitive information (organization/gov),dev,282,16,0.0567
+types_of_harm,Social stereotypes and unfair discrimination,dev,228,2,0.0088
+types_of_harm,Toxic language (hate speech),dev,150,3,0.02
+types_of_harm,Treat Chatbot as a Human,dev,138,8,0.058

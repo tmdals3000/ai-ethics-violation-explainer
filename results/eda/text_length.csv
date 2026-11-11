@@ -1,0 +1,7 @@
+source,scope,n,chars_median,chars_p95,chars_max,judge_text_over_3000chars,judge_context_over_3000chars,embed_tokens_median,embed_over_256tokens
+do_not_answer,all,5634,460,1876,5197,15,0,103,830
+do_not_answer,dev,2256,460,1862,4122,3,0,103,320
+jigsaw,all,2029,138,419,499,0,0,40,1
+jigsaw,dev,783,138,418,499,0,0,39,0
+prosocial,all,165681,63,132,672,0,0,17,0
+prosocial,dev,20416,64,131,634,0,0,17,0

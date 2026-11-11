@@ -8,14 +8,15 @@ Project 4 · Baseline v0 (`baseline-v0`, 2026-11-08)
 >
 > | | 단계 | 코드 | 상태 | 기록 |
 > |---|---|---|---|---|
-> | P0 | 데이터 준비 | [`src/data.py`](src/data.py) | ✅ | [ASSUMPTIONS](docs/ASSUMPTIONS.md) (A-split, A-pd-label …) |
+> | P0 | 데이터 준비 | [`src/data.py`](src/data.py) · [`scripts/eda_v1.py`](scripts/eda_v1.py) | ✅ | [EDA](docs/EDA.md) · [ASSUMPTIONS](docs/ASSUMPTIONS.md) (A-split, A-pd-label …) |
 > | P1 | 규칙 찾기 | [`src/retrieval.py`](src/retrieval.py) | ✅ | [ASSUMPTIONS · τ 결정 기록](docs/ASSUMPTIONS.md#τ-결정-기록) |
 > | P2 | 판정 비교 | [`src/judges.py`](src/judges.py) · [`src/metrics.py`](src/metrics.py) | ✅ 4개 모델 | [BASELINE_REPORT §2](docs/BASELINE_REPORT.md#2-dev-결과) |
 > | P3 | 오류 진단 | [`src/diagnose.py`](src/diagnose.py) | ✅ | [BASELINE_REPORT §2](docs/BASELINE_REPORT.md#p3-원인별-잘못된-판정-base) |
 > | P4 | 수정 효과 | [`src/effects.py`](src/effects.py) | ⏸ 코드만, 4개 모델로 미실행 | [BASELINE_REPORT §6](docs/BASELINE_REPORT.md#6-다음-할-일) |
 > | 화면 | Streamlit | [`app/app.py`](app/app.py) | ✅ 탭 4개 | — |
 >
-> ⚠ **모든 수치는 dev 결과입니다. test 는 아직 보지 않았습니다.** 검증 상태: `IS만`.
+> ⚠ **모든 수치는 dev 결과입니다. test 는 아직 보지 않았습니다.** 검증 상태: `IS만` — In-Sample: 임계값·τ 를 정한 바로 그 dev 로 평가한 값이라
+> 실제 성능보다 좋게 나올 수 있습니다. 따로 떼어 둔 test 로 확인하면 `OOS 통과`(Out-of-Sample) 로 바뀝니다.
 > split·유사도·좌표는 조교 파일이 없어 **임시**로 만들었습니다.
 
 ---
@@ -31,7 +32,7 @@ Project 4 · Baseline v0 (`baseline-v0`, 2026-11-08)
 | `scripts/` | `run.py` 전체 실행기 · `record_run.py` 실험 결과 기록·README 표 생성 · `trial_analysis.py` 시험 실행 분석 |
 | `app/app.py` | Streamlit 화면 4탭. 유해 원문은 기본으로 가리고 눌렀을 때만 보인다 |
 | `results/` | 지표·판정 결과 (**원문 없음**, `text_id` 만). 실험 원장은 `results/experiments.csv` |
-| `docs/` | [`ASSUMPTIONS.md`](docs/ASSUMPTIONS.md) 임시 결정 · [`BASELINE_REPORT.md`](docs/BASELINE_REPORT.md) 결과 보고서 |
+| `docs/` | [`ASSUMPTIONS.md`](docs/ASSUMPTIONS.md) 임시 결정 · [`BASELINE_REPORT.md`](docs/BASELINE_REPORT.md) 결과 보고서 · [`EDA.md`](docs/EDA.md) 데이터 탐색 · [`TEAM_SYNC.md`](docs/TEAM_SYNC.md) 팀원 브랜치와 차이 |
 | `tests/` | pytest 17개. 가짜 데이터는 `tests/fixtures` 에만 |
 
 원본 데이터·가공 데이터·모델 캐시는 저장소 밖(`C:/ml/...`)에 두며 커밋하지 않는다.
@@ -211,7 +212,7 @@ DNA 는 위반이 드물어 표본을 줄이면 PR-AUC·F1 이 불안정해서 �
 ### 4.3 측정 원칙
 
 1. **dev 와 test 를 가른다.** 임계값·τ·프롬프트는 dev 에서만 정하고, test 는 최종 설정을 고정한 뒤 1회만 본다.
-2. **수치에는 표본을 같이 적는다.** Jigsaw·PD 는 50건이라 차이를 과하게 해석하지 않는다.
+2. **수치에는 표본을 같이 적는다.** v0 의 Jigsaw·PD 는 50건이었다. v1 부터 Jigsaw dev 전체(783건), PD 500건이다.
 3. **같은 본문은 같은 split 에.** Jigsaw 에서 같은 본문 43그룹 188행이 split 을 넘나드는 누수를 찾아 105행을 옮겼다.
 4. **임시로 정한 것은 전부 적는다.** 조교 파일이 없어 정한 것은 [ASSUMPTIONS](docs/ASSUMPTIONS.md) 에 번호를 붙여 남긴다.
 
@@ -230,12 +231,18 @@ DNA 는 위반이 드물어 표본을 줄이면 PR-AUC·F1 이 불안정해서 �
 - README 표는 손으로 고치지 않는다. 위 명령이 `experiments.csv` 에서 만든다. 새 version 은 아래 자리표시 바로 밑(맨 위)에 쌓인다.
 - 수치는 dev 결과만 적는다. test 결과는 `split=test` 행으로 따로 기록하고 표 제목에 `test` 를 쓴다.
 
-### 5.2 알려진 문제 (Baseline v0)
+### 5.2 알려진 문제
+
+검증 상태 `IS만` = In-Sample. 임계값·τ 를 고른 dev 와 평가한 dev 가 같아서 낙관적인 값이다. test(Out-of-Sample) 로 확인하기 전까지 최종 성능으로 쓰지 않는다.
 
 1. **임시 split·규칙 트리:** 조교 `splits.csv`·similarity·coords 가 없어 고정 시드 split, roberta 유사도, PCA coords 를 임시로 만들었다. 규칙 트리는 DNA·Jigsaw 를 한 트리에 넣었고, DNA 텍스트 298건(13.2%)의 top-1 이 Jigsaw 규칙이다 → [BASELINE_REPORT 질문 1](docs/BASELINE_REPORT.md#7-멘토링조교-질문).
-2. **Jigsaw·ProsocialDialog 는 dev 50건 표본:** 지표의 변동이 크다. DNA 만 dev 전체(2,256건)다.
-3. **팀 v1·ShieldGemma 의 DNA 판정 대상 의심:** DNA 에서 AUC 가 팀 v1 0.434, ShieldGemma 0.516 으로 무작위 수준 이하다. DNA 응답 대부분이 거절문인데, 거절문 속 유해 주제 언급을 위반으로 보는 것으로 의심된다(질문·응답 중 무엇을 판정하는지 확인 필요).
-4. **최댓값 집계 문제:** base 는 상위 5 후보 규칙의 위반 확률 최댓값을 쓴다. P1 top-1 이 0.32 라 후보 대부분이 엉뚱한 규칙이고, DNA 에서는 정답 규칙을 뺀 rule_excluded AUC 가 base 보다 높다(ShieldGemma 0.583 vs 0.516, 팀 0.535 vs 0.434).
+2. ~~Jigsaw·ProsocialDialog 는 dev 50건 표본~~ → **Baseline v1 에서 해결:** Jigsaw dev 전체 783건, PD dev 500건(라벨 비율 유지)으로 늘렸다. Baseline v0 표는 50건 기준 그대로 남겨 둔다.
+3. **DNA 에서 팀 v1·ShieldGemma AUC 가 무작위 수준 (팀 v1 0.434, ShieldGemma 0.516) — 확인 완료:**
+   - 판정 형식은 문제가 아니었다. 네 모델 모두 질문과 응답을 함께 넣고 **응답**을 판정한다. ShieldGemma 프롬프트는 토크나이저에 내장된 공식 chat template 과 문구 3곳(관사·빈 줄·공백)만 다르고, 공식 템플릿으로 바꿔도 DNA 위반 65 + 정상 65건 AUC 가 0.507 → 0.497 (확률 상관 0.998) 로 같았다 (`results/trial/sg_template_check.csv`).
+   - 실제 원인 ① **팀 v1 이 거절문에 높은 확률을 준다.** 정상 응답 중 확률 상위 50건의 32건이 거절문이고, 거절문 평균 확률 0.257 이 실제로 지시를 따른 응답(위반 58/64) 0.207 보다 높다.
+   - 실제 원인 ② ShieldGemma 는 거절문이 아니라 **주의 문구를 붙이고 내용을 준 응답**에 높은 확률을 주고(정상 상위 50건 중 32건), 기관 기밀 추측·거짓 전제를 그대로 받은 위반 응답에는 0에 가까운 확률을 준다.
+   - 근거: `results/dna_check/`, `scripts/dna_check.py`, 응답 유형 분포는 [EDA](docs/EDA.md).
+4. **후보 집계:** base 는 상위 5 후보 규칙의 위반 확률 최댓값을 쓴다. DNA 에서 정답 규칙을 뺀 rule_excluded AUC 가 base 보다 높다(ShieldGemma 0.583 vs 0.516, 팀 0.535 vs 0.434). 다만 top-1 후보만 쓰거나 유사도 가중 평균을 써도 AUC 가 0.5 를 넘지 않아(`results/dna_check/aggregation_compare.csv`) 집계 방식은 주원인이 아니다 → 최댓값 유지.
 5. **PD 팀 임계값이 0.01 에 걸림:** 출처별 dev F1 최대 기준으로 고르면, 위반 비율이 72% 인 ProsocialDialog 에서는 '거의 전부 위반'이 F1 을 최대로 만들어 임계값이 격자 최솟값 0.01 이 된다.
 
 ### 5.3 결과 표

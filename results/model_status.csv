@@ -1,3 +1,5 @@
 model,prompt_version,status,n_prompts,n_new_forward,seconds,per_second,label_tokens,load_plus_run_seconds
-shieldgemma,official,ok,22568,659,144.5,4.56,'Yes'=3553->'Yes'|'No'=1294->'No',
-team,team_v1,ok,22568,15507,1359.4,11.41,'Yes'=3553->'Yes'|'No'=1294->'No',1541.6
+llama_guard,official,ok,3539,1100,28.3,38.86,'safe'=19193->'safe'|'unsafe'=39257->'unsafe',44.4
+qwen3guard,official,ok,3539,1100,32.7,33.69,' Safe'=22291->' Safe'|' Unsafe'=73067->' Unsafe'|' Controversial'=2093->' Cont',36.2
+shieldgemma,official,ok,30323,5354,353.3,15.15,'Yes'=3553->'Yes'|'No'=1294->'No',
+team,team_v1,ok,30323,5400,601.2,8.98,'Yes'=3553->'Yes'|'No'=1294->'No',965.7
