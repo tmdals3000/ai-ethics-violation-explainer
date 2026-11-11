@@ -1,16 +1,34 @@
 judge,rule_l1,n,n_error,error_rate,low_n
+LlamaGuard3-1B / default,,50,27,0.54,False
 LlamaGuard3-1B / default,"Discrimination, Exclusion, Toxicity, Hateful, Offensive",444,10,0.0225,False
 LlamaGuard3-1B / default,Human-Chatbot Interaction Harms,282,16,0.0567,False
 LlamaGuard3-1B / default,Information Hazards,522,17,0.0326,False
 LlamaGuard3-1B / default,Malicious Uses,606,17,0.0281,False
 LlamaGuard3-1B / default,Misinformation Harms,402,36,0.0896,False
+LlamaGuard3-1B / default,Reddit community rules,50,28,0.56,False
+Qwen3Guard-0.6B / default,,50,20,0.4,False
 Qwen3Guard-0.6B / default,"Discrimination, Exclusion, Toxicity, Hateful, Offensive",444,16,0.036,False
 Qwen3Guard-0.6B / default,Human-Chatbot Interaction Harms,282,11,0.039,False
 Qwen3Guard-0.6B / default,Information Hazards,522,16,0.0307,False
 Qwen3Guard-0.6B / default,Malicious Uses,606,17,0.0281,False
 Qwen3Guard-0.6B / default,Misinformation Harms,402,16,0.0398,False
+Qwen3Guard-0.6B / default,Reddit community rules,50,18,0.36,False
+ShieldGemma-2B / base,,50,30,0.6,False
+ShieldGemma-2B / base,"Discrimination, Exclusion, Toxicity, Hateful, Offensive",444,11,0.0248,False
+ShieldGemma-2B / base,Human-Chatbot Interaction Harms,282,15,0.0532,False
+ShieldGemma-2B / base,Information Hazards,522,16,0.0307,False
+ShieldGemma-2B / base,Malicious Uses,606,14,0.0231,False
+ShieldGemma-2B / base,Misinformation Harms,402,28,0.0697,False
+ShieldGemma-2B / base,Reddit community rules,50,19,0.38,False
 ShieldGemma-2B / rule_only,"Discrimination, Exclusion, Toxicity, Hateful, Offensive",444,11,0.0248,False
 ShieldGemma-2B / rule_only,Human-Chatbot Interaction Harms,282,10,0.0355,False
 ShieldGemma-2B / rule_only,Information Hazards,522,16,0.0307,False
 ShieldGemma-2B / rule_only,Malicious Uses,606,15,0.0248,False
 ShieldGemma-2B / rule_only,Misinformation Harms,402,36,0.0896,False
+ShieldGemma-2B / rule_only,Reddit community rules,50,20,0.4,False
+Team-team_v3 / rule_only,"Discrimination, Exclusion, Toxicity, Hateful, Offensive",444,12,0.027,False
+Team-team_v3 / rule_only,Human-Chatbot Interaction Harms,282,9,0.0319,False
+Team-team_v3 / rule_only,Information Hazards,522,16,0.0307,False
+Team-team_v3 / rule_only,Malicious Uses,606,10,0.0165,False
+Team-team_v3 / rule_only,Misinformation Harms,402,21,0.0522,False
+Team-team_v3 / rule_only,Reddit community rules,50,20,0.4,False

@@ -1,61 +1,143 @@
-# 데모: 텍스트 AI 윤리 규칙 위반 판정 설명 시스템
+# 데모: 텍스트 AI 윤리 규칙 위반 판정 설명 시스템 (Minjun)
 
-Project 4 개인 데모 버전입니다. Do-Not-Answer 데이터 하나로 PDF의 전체 흐름(전처리 → 규칙 찾기 → 판정 → 분석 → 화면)을 작게 구현했습니다.
+Project 4 개인 데모입니다. 데이터 3종으로 PDF 의 전체 흐름(전처리 → 규칙 찾기 → 판정 → 분석 → 화면)을 구현했습니다.
+모든 수치는 **dev** 결과이고, test 는 아직 보지 않았습니다.
 
-## 결과 요약 (dev 2,256개)
+## 결과 요약
 
-| 항목 | 값 |
-|---|---|
-| P1 규칙 찾기 (τ = 0.20) | top-1 0.268 · top-3 0.463 · 효율 0.399 · 경계 사례 336개 |
-| P2 ROC-AUC | Qwen3Guard 0.800 · Llama Guard 0.758 · ShieldGemma(규칙 문장만) 0.563 |
-| P2 PR-AUC | Qwen3Guard 0.262 · Llama Guard 0.140 · ShieldGemma 0.149 |
-| P3 잘못된 판정 (모델별, 260건) | Llama Guard 96 · Qwen3Guard 76 · ShieldGemma 88 |
-| P3 원인 | 라벨 확인 필요 138 · 규칙 문장 64 · 판정 모델 58 · 규칙 찾기 0 (데모 한계, 아래 참고) |
+### P1 규칙 찾기 (τ = 0.20)
+
+| 출처 | n | top-1 | top-3 | 효율 (비교 노드 비율) | 경계 사례 (τ±0.02) |
+|---|---|---|---|---|---|
+| Do-Not-Answer | 2,256 | 0.333 | 0.560 | 0.761 | 135 |
+| Jigsaw | 50 | 0.940 | 0.940 | 1.000 | 0 |
+
+- 규칙 노드를 이름 대신 **문장형 규칙**으로 바꿨더니 DNA top-1 이 0.268 → 0.333 으로 올랐습니다.
+- 대신 문장형 규칙은 유사도가 전반적으로 높아서 τ = 0.20 에서 남는 중분류가 많아지고 효율이 0.40 → 0.76 으로 나빠졌습니다. τ 를 다시 고를 필요가 있습니다 (`results/p1_tau_sweep.csv`).
+- Jigsaw 는 규칙이 2개뿐이라 효율은 항상 1.0 입니다.
+
+### P2 판정 비교
+
+| 출처 (n, 위반) | 판정 모델 / 조건 | 임계값 | ROC-AUC | PR-AUC | F1 | κ(사람) |
+|---|---|---|---|---|---|---|
+| DNA (2,256, 65) | Llama Guard 3 1B / 기본 | 0.50 | 0.758 | 0.140 | 0.158 | 0.137 |
+| | Qwen3Guard 0.6B / 기본 | 0.50 | **0.800** | **0.262** | **0.321** | **0.305** |
+| | ShieldGemma 2B / 기본(후보 5개) | 0.50 | 0.499 | 0.108 | 0.208 | 0.190 |
+| | ShieldGemma 2B / 규칙 문장만 | 0.50 | 0.563 | 0.149 | 0.228 | 0.209 |
+| | 팀 판정기 v3 / 규칙 문장만 | 0.57 | 0.591 | 0.167 | 0.244 | 0.232 |
+| Jigsaw (50, 25) | Llama Guard 3 1B / 기본 | 0.50 | 0.490 | 0.574 | 0.500 | −0.120 |
+| | Qwen3Guard 0.6B / 기본 | 0.50 | **0.685** | **0.670** | 0.609 | **0.280** |
+| | ShieldGemma 2B / 기본(후보 5개) | 0.50 | 0.678 | 0.647 | 0.537 | 0.240 |
+| | ShieldGemma 2B / 규칙 문장만 | 0.50 | 0.659 | 0.641 | 0.500 | 0.200 |
+| | 팀 판정기 v3 / 규칙 문장만 | 0.50 | 0.610 | 0.613 | **0.615** | 0.200 |
+| ProsocialDialog (50, 36) | Llama Guard 3 1B / 기본 | 0.50 | 0.751 | 0.896 | 0.400 | 0.157 |
+| | Qwen3Guard 0.6B / 기본 | 0.50 | **0.800** | **0.921** | **0.630** | **0.288** |
+| | ShieldGemma 2B / 기본(후보 5개) | 0.50 | 0.688 | 0.863 | 0.286 | 0.101 |
+
+- 세 출처 모두 **Qwen3Guard 가 가장 좋습니다.**
+- DNA 는 위반이 2.9% 로 드물어 PR-AUC 가 낮습니다 (무작위 기준선 = 0.029).
+- Jigsaw·ProsocialDialog 는 50개 표본이라 모델 간 차이를 과하게 해석하면 안 됩니다.
+
+### 팀 판정기 프롬프트 비교 (DNA dev 300개 = 위반 65 + 정상 235, 규칙 문장만)
+
+| 버전 | 추가한 원칙 (가설) | ROC-AUC | PR-AUC |
+|---|---|---|---|
+| ShieldGemma (기준) | 없음 | 0.587 | 0.423 |
+| team_v1 | 거절·경고·안전한 안내는 위반이 아님 | **0.616** | 0.436 |
+| team_v2 | 질문이 아니라 응답만 판정 | 0.576 | 0.419 |
+| team_v3 | v1 + 실제로 금지된 도움을 줬을 때만 위반 | 0.611 | **0.443** |
+
+- 가설: DNA 응답 대부분은 거절문인데, 거절문 속 위험한 주제 단어 때문에 위반으로 잘못 판정한다.
+- "거절은 위반이 아니다"를 넣은 v1·v3 가 기준보다 나아졌고, "응답만 판정"(v2)은 효과가 없었습니다.
+- PR-AUC 기준으로 **v3 를 팀 판정기로 선택**했고, DNA dev 전체(2,256개)에서도 기준보다 좋았습니다 (AUC 0.563 → 0.591).
+- 300개 표본이라 차이가 크지 않으므로 "개선 경향"으로 봐야 합니다.
+
+### P3 잘못된 판정의 원인 (모델별로 따로 진단)
+
+| 출처 | 판정 모델 / 조건 | 1 규칙 찾기 | 2 라벨 확인 | 3 규칙 문장 | 4 판정 모델 | 합계 |
+|---|---|---|---|---|---|---|
+| DNA | Llama Guard / 기본 | – | 43 | 11 | 42 | 96 |
+| | Qwen3Guard / 기본 | – | 43 | 8 | 25 | 76 |
+| | ShieldGemma / 기본(후보 5개) | 36 | 22 | 11 | 15 | 84 |
+| | ShieldGemma / 규칙 문장만 | – | 43 | 22 | 23 | 88 |
+| | 팀 v3 / 규칙 문장만 | – | 43 | 22 | 3 | 68 |
+| Jigsaw | Llama Guard / 기본 | – | 3 | 3 | 22 | 28 |
+| | Qwen3Guard / 기본 | – | 3 | 1 | 14 | 18 |
+| | ShieldGemma / 기본(후보 5개) | 1 | 3 | 10 | 5 | 19 |
+| | ShieldGemma / 규칙 문장만 | – | 3 | 11 | 6 | 20 |
+| | 팀 v3 / 규칙 문장만 | – | 3 | 11 | 6 | 20 |
+
+(– = 규칙을 입력받지 않거나 정답 규칙을 직접 넣는 조건이라 원인 1이 해당 없음)
+
+- DNA 에서 **모든 모델이 같은 답인데 사람 라벨만 다른 텍스트가 43개**입니다 (원인 2). 라벨 자체를 다시 확인해 볼 후보입니다.
+- ShieldGemma '기본' 조건의 잘못된 판정 84건 중 **36건(43%)이 규칙 찾기 문제**입니다.
+- 팀 판정기는 '판정 모델 문제'가 3건뿐이고, 남은 오류는 대부분 라벨 확인(43)과 규칙 문장(22) 쪽입니다.
+
+### P4 수정 효과
+
+| 출처 | ShieldGemma AUC: 기본(후보 5개) | 규칙 문장만(정답 규칙) | 변화 |
+|---|---|---|---|
+| DNA | 0.499 | 0.563 | **+0.064** |
+| Jigsaw | 0.678 | 0.659 | −0.019 |
+
+- DNA 에서는 후보 규칙 대신 정답 규칙을 주면 좋아집니다 → **규칙 찾기를 고치면 판정도 좋아질 여지**가 있습니다.
+- Jigsaw 는 규칙이 2개뿐이라 규칙 찾기가 거의 항상 맞아서(top-1 0.94) 차이가 없습니다.
+- 화면 P4 탭에서는 임계값을 바꿨을 때 뒤집히는 판정(맞게/틀리게)도 볼 수 있습니다.
 
 ## 파일 구성
 
 | 단계 | 파일 | 하는 일 | 실행 위치 |
 |---|---|---|---|
-| 1 | `preprocess.py` | 응답 6개를 한 행씩 펼치기 (939 → 5,634행), 텍스트 ID `dna-{질문번호}-{LLM}` | 노트북 |
-| 2 | `make_assets.py` | 규칙 트리(78개 노드), dev/test 분할, 유사도(all-roberta-large-v1), 2차원 좌표(UMAP) | 노트북 (CPU 약 1~2시간) |
-| 3 | `judge_colab.ipynb` | 판정 모델 3개로 위반 확률 계산 → `judgments.csv` | Colab T4 GPU (약 1시간) |
-| 4 | `analyze.py` | P1 BFS 규칙 찾기·τ 비교·경계 사례, P2 지표·모델 간 κ·오판 행렬, P3 원인 분류 → `results/` | 노트북 |
-| 4 | `diagnose.py` | P3 원인 규칙 1–4 (analyze.py·app.py 가 같이 씀) | — |
+| 1 | `preprocess.py` | 데이터 3종 → `texts.csv` (DNA 응답 6개 펼치기, Jigsaw 예시 분리, ProsocialDialog 영어 필터·라벨 변환), dev/test 분할 | 노트북 |
+| 2 | `make_assets.py` | 출처별 규칙 트리(81개 노드), 유사도(all-roberta-large-v1), UMAP 좌표, BFS 상위 5개 후보 → `judge_input.csv` | 노트북 |
+| 2 | `retrieval.py` | BFS 규칙 찾기 (make_assets·analyze·app 공통) | — |
+| 3 | `judge_colab.ipynb` | 1차 판정: DNA × Llama Guard·Qwen3Guard·ShieldGemma(규칙 문장만) → `judgments.csv` | Colab T4 |
+| 3 | `judge_colab2.ipynb` | 2차 판정: 새 데이터, 팀 프롬프트 3개 비교, 팀 판정기, ShieldGemma 기본(후보 5개) → `judgments_new.csv`, `base_candidates.csv`, `team_prompt_comparison.csv` | Colab·Kaggle T4 |
+| 4 | `analyze.py` | P1 τ 비교·경계 사례, P2 지표·모델 간 κ·오판 행렬, P3 원인, P4 효과 → `results/` | 노트북 |
+| 4 | `diagnose.py` | P3 원인 규칙 1–4 (analyze·app 공통) | — |
 | 5 | `app.py` | Streamlit 화면 4탭 + 공통 필터 + 선택 연동 + 원문 가리기 | 노트북 |
 
 ## 실행 방법
 
 ```
 pip install -r requirements.txt
-python preprocess.py          # data_en.csv 필요 (아래 '데이터' 참고)
-python make_assets.py
-# judge_colab.ipynb 를 Colab 에서 실행 → judgments.csv 를 이 폴더에 넣기
+python preprocess.py        # data_en.csv, jigsaw/train.csv 필요. ProsocialDialog 는 자동 다운로드
+python make_assets.py       # CPU 로 DNA 전체 임베딩은 1시간 이상
+# judge_input.csv 를 Colab 에 올리고 judge_colab.ipynb, judge_colab2.ipynb 실행 → 결과 csv 를 이 폴더에
 python analyze.py
 streamlit run app.py
 ```
 
 ## 데이터 (저장소에 올리지 않음)
 
-유해한 원문이 들어 있어서 아래 파일은 올리지 않았습니다. 실행하면 다시 만들어집니다.
+유해한 원문이 들어 있거나 재배포가 제한된 파일은 올리지 않았습니다. 위 순서대로 실행하면 다시 만들어집니다.
 
-- `data_en.csv`: Do-Not-Answer 원본 (`github.com/libr-ai/do-not-answer` 의 `datasets/data_en.csv`)
-- `dna_long.csv`: `preprocess.py` + `make_assets.py` 결과
-- `text_emb.npy`: `make_assets.py` 결과 (임베딩)
+- `data_en.csv`: Do-Not-Answer 원본 (`github.com/libr-ai/do-not-answer`)
+- `jigsaw/`: Jigsaw ACRC (Kaggle 대회 규칙 동의 후 다운로드)
+- `texts.csv`, `judge_input.csv`, `jigsaw_examples.csv`: 원문 포함
+- `text_emb.npy`: 임베딩 (용량 큼)
 
 ## 설정과 가정
 
-- **분할:** 조교 `splits.csv` 가 아직 없어서, 승민 님 baseline 과 같은 dev(판정된 376개 질문 × 6 = 2,256개)를 쓰고 나머지를 test 로 둠. 같은 질문의 응답 6개는 항상 같은 쪽.
-- **BFS:** 대분류·중분류는 모두 비교, 유사도 ≥ τ 인 중분류만 남기고(없으면 최고 1개) 그 아래 소분류를 모두 비교. 효율 = 비교 노드 수 / 78.
-- **판정 확률:** 판정 단어 바로 앞까지 프롬프트를 넣고 다음 토큰 확률을 봄.
-  - Qwen3Guard: P(Unsafe) + 0.5 × P(Controversial) — 승민 님은 Controversial 을 1.0 으로 셈 (팀에서 통일 필요)
-  - Llama Guard 3 1B: P(unsafe)
-  - ShieldGemma-2B: 정답 소분류 규칙 문장을 넣고 P(Yes) (PDF 의 '규칙 문장만' 조건)
-- **임계값:** 0.5 (화면에서 바꿀 수 있음)
+| 항목 | 선택 | 이유 |
+|---|---|---|
+| 분할 | DNA 는 팀 baseline 과 같은 dev 2,256개(376개 질문 × 6). Jigsaw 는 댓글 본문 단위 50:50. ProsocialDialog 는 HF validation = dev | 조교 `splits.csv` 가 아직 없음. 같은 질문·같은 본문이 dev 와 test 에 갈라지지 않게 함 |
+| 판정 표본 | DNA dev 전체, Jigsaw·ProsocialDialog dev 에서 라벨 비율 유지 50개씩 | GPU 시간 |
+| ProsocialDialog 라벨 | casual·possibly_needs_caution → 정상, probably_needs_caution 이상 → 위반 | 조교 설명서가 오면 맞춰야 함 |
+| 규칙 트리 | 출처별로 따로 (DNA 트리: DNA·ProsocialDialog, Jigsaw 트리: Jigsaw) | 한 트리에 섞으면 문장이 긴 Jigsaw 규칙이 DNA 텍스트를 끌어감 |
+| 노드 문장 | 임베딩용은 문장형 규칙, 판정 모델에 넣는 규칙은 "소분류 이름: 설명" | 노드 이름만으로는 임베딩이 짧아 유사도가 불안정 |
+| BFS | 대·중분류 모두 비교, 유사도 ≥ τ 인 중분류만 남겨 그 아래 소분류 비교 (없으면 최고 1개). τ = 0.20 | |
+| 위반 확률 | 판정 단어 바로 앞까지 넣고 다음 토큰 확률. Qwen3Guard = P(Unsafe) + 0.5 × P(Controversial) | 승민 님은 Controversial 을 1.0 으로 셈 → 팀에서 통일 필요 |
+| 기본 조건 | ShieldGemma 에 BFS 상위 5개 후보 규칙을 하나씩 넣고 최댓값 | PDF 정의 |
+| 임계값 | 기준 모델 0.5. 팀 판정기는 DNA dev F1 최대(0.57), 표본 50개인 출처는 0.5 | 50개로 고르면 '전부 위반'으로 쏠림 |
+| P3 원인 | 모델마다 따로. 원인 1은 규칙을 입력받는 모델의 기본 조건에만 적용 | Llama Guard·Qwen3Guard 는 규칙을 안 받음 |
 
-## 데모의 한계
+## 한계와 다음 할 일
 
-- 출처는 Do-Not-Answer 만 (Jigsaw, ProsocialDialog 없음)
-- 팀 판정기 없음 → P3 원인 3번(규칙 문장)은 ShieldGemma(규칙 문장만) 하나로 판단
-- P3 는 모델마다 따로 진단. 원인 1(규칙 찾기)은 규칙을 입력받는 모델이 BFS 후보 규칙으로 판정한 결과(base)가 있어야 세는데, 데모에서는 이 판정을 돌리지 않아 0건. 대신 정답 규칙이 상위 5개 후보 밖인 잘못된 판정(161건)을 화면 지도에 ◆로 표시
-- P4 는 '임계값 변경 효과'만 구현. '규칙 제외'·'규칙+예시' 조건과 '규칙 문장 편집 → 다시 판정'은 GPU 판정이 더 필요해서 제외
-- 모든 수치는 dev 결과. test 는 아직 보지 않음
+- **판정 조건 2개 없음:** '규칙 제외'(처음 보는 규칙에서 AUC 하락폭)와 '규칙 + 예시'(회복폭). Jigsaw 예시는 `jigsaw_examples.csv` 로 정리해 둠
+- **팀 판정기의 기본 조건 없음:** 팀 판정기는 '규칙 문장만'만 돌림
+- **'규칙 문장 편집 → 다시 판정' 없음:** 노트북에 GPU 가 없어 화면에서 바로 판정할 수 없음. 고친 규칙 문장을 Colab 에서 미리 판정해 두는 방식을 검토
+- **표본이 작음:** Jigsaw·ProsocialDialog 50개씩
+- **τ 재선택:** 문장형 규칙에 맞는 τ 를 dev 에서 다시 골라야 함
+- **원인 2 (라벨 확인) 43건:** 실제로 라벨이 이상한지 직접 읽어 볼 필요
+- **test 미사용:** 정량 평가표는 설정을 확정한 뒤 test 에서 한 번만 계산

@@ -1,0 +1,3 @@
+source,model,auc_base,auc_rule_only,auc_change,prauc_base,prauc_rule_only
+do_not_answer,ShieldGemma-2B,0.4992,0.5632,0.064,0.1084,0.1485
+jigsaw,ShieldGemma-2B,0.6784,0.6592,-0.0192,0.6467,0.6407

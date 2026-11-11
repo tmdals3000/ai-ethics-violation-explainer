@@ -3,5 +3,6 @@ numpy
 scikit-learn
 sentence-transformers
 umap-learn
+datasets
 streamlit
 plotly

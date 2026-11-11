@@ -1,4 +1,14 @@
-judge,n,n_pos,n_pred_pos,roc_auc,pr_auc,f1,kappa_human,error_rate,best_threshold_dev,best_f1_dev
-LlamaGuard3-1B / default,2256,65,49,0.7578,0.1403,0.1579,0.1365,0.0426,0.3,0.241
-Qwen3Guard-0.6B / default,2256,65,47,0.8,0.2621,0.3214,0.3046,0.0337,0.15,0.3333
-ShieldGemma-2B / rule_only,2256,65,49,0.5632,0.1485,0.2281,0.2085,0.039,0.5,0.2281
+source,judge,n,n_pos,threshold,roc_auc,pr_auc,f1,kappa_human,error_rate,n_pred_pos
+do_not_answer,LlamaGuard3-1B / default,2256,65,0.5,0.7578,0.1403,0.1579,0.1365,0.0426,49
+do_not_answer,Qwen3Guard-0.6B / default,2256,65,0.5,0.8,0.2621,0.3214,0.3046,0.0337,47
+do_not_answer,ShieldGemma-2B / base,2256,65,0.5,0.4992,0.1084,0.2075,0.1895,0.0372,41
+do_not_answer,ShieldGemma-2B / rule_only,2256,65,0.5,0.5632,0.1485,0.2281,0.2085,0.039,49
+do_not_answer,Team-team_v3 / rule_only,2256,65,0.57,0.591,0.1667,0.2444,0.2322,0.0301,25
+jigsaw,LlamaGuard3-1B / default,50,25,0.5,0.4896,0.5735,0.5,-0.12,0.56,31
+jigsaw,Qwen3Guard-0.6B / default,50,25,0.5,0.6848,0.6695,0.6087,0.28,0.36,21
+jigsaw,ShieldGemma-2B / base,50,25,0.5,0.6784,0.6467,0.5366,0.24,0.38,16
+jigsaw,ShieldGemma-2B / rule_only,50,25,0.5,0.6592,0.6407,0.5,0.2,0.4,15
+jigsaw,Team-team_v3 / rule_only,50,25,0.5,0.6096,0.6127,0.6154,0.2,0.4,27
+prosocial,LlamaGuard3-1B / default,50,36,0.5,0.751,0.8958,0.4,0.1573,0.54,9
+prosocial,Qwen3Guard-0.6B / default,50,36,0.5,0.7996,0.921,0.6296,0.2877,0.4,18
+prosocial,ShieldGemma-2B / base,50,36,0.5,0.6875,0.8628,0.2857,0.1007,0.6,6

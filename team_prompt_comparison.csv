@@ -1,0 +1,5 @@
+version,n,roc_auc,pr_auc
+team_v1,300,0.6161,0.4363
+team_v2,300,0.5761,0.4189
+team_v3,300,0.6105,0.4431
+shieldgemma(기준),300,0.587,0.4229

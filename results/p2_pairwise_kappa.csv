@@ -1,4 +1,24 @@
-judge_a,judge_b,kappa
-LlamaGuard3-1B / default,Qwen3Guard-0.6B / default,0.3614
-LlamaGuard3-1B / default,ShieldGemma-2B / rule_only,0.3324
-Qwen3Guard-0.6B / default,ShieldGemma-2B / rule_only,0.404
+source,judge_a,judge_b,kappa
+do_not_answer,LlamaGuard3-1B / default,Qwen3Guard-0.6B / default,0.3614
+do_not_answer,LlamaGuard3-1B / default,ShieldGemma-2B / base,0.3879
+do_not_answer,LlamaGuard3-1B / default,ShieldGemma-2B / rule_only,0.3324
+do_not_answer,LlamaGuard3-1B / default,Team-team_v3 / rule_only,0.2868
+do_not_answer,Qwen3Guard-0.6B / default,ShieldGemma-2B / base,0.351
+do_not_answer,Qwen3Guard-0.6B / default,ShieldGemma-2B / rule_only,0.404
+do_not_answer,Qwen3Guard-0.6B / default,Team-team_v3 / rule_only,0.4927
+do_not_answer,ShieldGemma-2B / base,ShieldGemma-2B / rule_only,0.7279
+do_not_answer,ShieldGemma-2B / base,Team-team_v3 / rule_only,0.5084
+do_not_answer,ShieldGemma-2B / rule_only,Team-team_v3 / rule_only,0.6434
+jigsaw,LlamaGuard3-1B / default,Qwen3Guard-0.6B / default,0.4607
+jigsaw,LlamaGuard3-1B / default,ShieldGemma-2B / base,0.0059
+jigsaw,LlamaGuard3-1B / default,ShieldGemma-2B / rule_only,-0.0219
+jigsaw,LlamaGuard3-1B / default,Team-team_v3 / rule_only,-0.1419
+jigsaw,Qwen3Guard-0.6B / default,ShieldGemma-2B / base,0.1087
+jigsaw,Qwen3Guard-0.6B / default,ShieldGemma-2B / rule_only,0.0598
+jigsaw,Qwen3Guard-0.6B / default,Team-team_v3 / rule_only,-0.1058
+jigsaw,ShieldGemma-2B / base,ShieldGemma-2B / rule_only,0.9533
+jigsaw,ShieldGemma-2B / base,Team-team_v3 / rule_only,0.5723
+jigsaw,ShieldGemma-2B / rule_only,Team-team_v3 / rule_only,0.5349
+prosocial,LlamaGuard3-1B / default,Qwen3Guard-0.6B / default,0.4639
+prosocial,LlamaGuard3-1B / default,ShieldGemma-2B / base,0.2991
+prosocial,Qwen3Guard-0.6B / default,ShieldGemma-2B / base,0.187

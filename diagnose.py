@@ -1,24 +1,21 @@
 """
-P3 원인 진단 함수 (analyze.py 와 app.py 가 같이 씀)
+P3 원인 진단 (analyze.py 와 app.py 가 같이 씀)
 
-잘못된 판정 하나 = (텍스트, 판정 모델) 한 쌍. 모델마다 따로 진단한다.
-위에서부터 처음 해당하는 원인 하나만 붙인다.
+잘못된 판정 하나 = (텍스트, 판정 모델) 한 쌍. 모델마다 따로 진단하고, 위에서부터 처음 해당하는 원인 하나만 붙인다.
 
-  1. 규칙 찾기 문제 : 규칙을 입력받는 모델이 'BFS 로 찾은 후보 규칙'으로 판정했는데(base 조건),
-                      정답 규칙이 상위 k 후보에 없음
-                      → Llama Guard·Qwen3Guard 는 규칙을 입력받지 않으므로 해당 없음
-                      → '규칙 문장만' 조건은 정답 규칙을 직접 넣으므로 해당 없음
+  1. 규칙 찾기 문제 : 규칙을 입력받는 모델이 BFS 후보 규칙으로 판정했는데(base 조건)
+                      (a) 정답 규칙이 상위 k 후보에 없음, 또는
+                      (b) 정답 규칙은 후보에 있지만 다른 후보 규칙 때문에 판정이 바뀜
+                          (최댓값을 낸 후보가 정답 규칙이 아니고, 같은 모델에 정답 규칙만 넣으면 맞음)
+                      → Llama Guard·Qwen3Guard(규칙을 안 받음)와 '규칙 문장만' 조건(정답 규칙을 직접 넣음)은 해당 없음
   2. 라벨 확인 필요 : 모든 판정 모델이 같은 답인데 사람 라벨만 다름
-  3. 규칙 문장 문제 : 정답 규칙 문장을 넣은 모델(ShieldGemma '규칙 문장만')이 모두 틀림
-  4. 판정 모델 문제 : 위 어디에도 해당하지 않음 (정답 규칙을 넣으면 맞는데 이 모델은 틀림)
-
-※ 데모 한계: 규칙을 입력받는 모델의 base 판정(BFS 후보로 판정)을 돌리지 않아서 1번은 나오지 않음.
-             정답 규칙이 상위 k 후보 밖인지는 'gold_outside_topk' 열에 참고로 표시함.
+  3. 규칙 문장 문제 : 정답 규칙 문장을 넣은 모델('규칙 문장만' 조건: ShieldGemma·팀 판정기)이 모두 틀림
+  4. 판정 모델 문제 : 위 어디에도 해당하지 않음
 """
 import pandas as pd
 
 CAUSES = ["1. 규칙 찾기 문제", "2. 라벨 확인 필요", "3. 규칙 문장 문제", "4. 판정 모델 문제"]
-RULE_TAKING = ("ShieldGemma", "Team")      # 규칙 문장을 입력받는 모델 이름 앞부분
+RULE_TAKING = ("ShieldGemma", "Team")
 
 
 def takes_rules(judge):
@@ -26,19 +23,26 @@ def takes_rules(judge):
 
 
 def uses_gold_rule(judge):
-    return "rule_only" in judge
+    return judge.endswith("rule_only")
 
 
-def diagnose(m, judges, threshold, gold_in_topk):
+def is_base(judge):
+    return takes_rules(judge) and judge.endswith("/ base")
+
+
+def diagnose(m, judges, thresholds, gold_in_topk, base_argmax=None, gold_rule=None):
     """
-    m           : text_id, human_harmful, 그리고 판정 모델별 위반 확률 열이 있는 표
-    judges      : 판정 모델 열 이름 목록 (예: 'ShieldGemma-2B / rule_only')
-    threshold   : 이 값 이상이면 '위반'
-    gold_in_topk: {text_id: 정답 규칙이 상위 k 후보 안에 있으면 True}
-    반환        : 잘못된 판정 한 줄당 한 행 (text_id, judge, p_violation, pred, human_harmful, cause, ...)
+    m            : text_id, human_harmful, 판정 모델별 위반 확률 열
+    judges       : 판정 모델 열 이름 (예: 'ShieldGemma-2B / base')
+    thresholds   : {판정 모델: 임계값}
+    gold_in_topk : {text_id: 정답 규칙이 상위 k 후보 안에 있으면 True}
+    base_argmax  : {text_id: base 조건에서 위반 확률 최댓값을 낸 후보 규칙}
+    gold_rule    : {text_id: 정답 규칙 노드}
     """
+    base_argmax = base_argmax or {}
+    gold_rule = gold_rule or {}
     y = m["human_harmful"].values
-    preds = (m[judges] >= threshold).astype(int)
+    preds = pd.DataFrame({j: (m[j] >= thresholds.get(j, 0.5)).astype(int) for j in judges}, index=m.index)
     all_agree = (preds.nunique(axis=1) == 1).values
     gold_judges = [j for j in judges if uses_gold_rule(j)]
     gold_all_wrong = (preds[gold_judges].ne(m["human_harmful"], axis=0).all(axis=1).values
@@ -46,18 +50,18 @@ def diagnose(m, judges, threshold, gold_in_topk):
 
     rows = []
     for jc in judges:
-        wrong = preds[jc].values != y
-        for i in wrong.nonzero()[0]:
+        same_model_gold = jc.replace("/ base", "/ rule_only")
+        for i in (preds[jc].values != y).nonzero()[0]:
             tid = m["text_id"].iloc[i]
             outside = not gold_in_topk.get(tid, True)
-            if takes_rules(jc) and not uses_gold_rule(jc) and outside:
-                cause = CAUSES[0]
-            elif all_agree[i]:
-                cause = CAUSES[1]
-            elif gold_all_wrong[i]:
-                cause = CAUSES[2]
-            else:
-                cause = CAUSES[3]
+            cause = None
+            if is_base(jc):
+                other_rule = (base_argmax.get(tid) not in (None, gold_rule.get(tid))
+                              and same_model_gold in preds and preds[same_model_gold].iloc[i] == y[i])
+                if outside or other_rule:
+                    cause = CAUSES[0]
+            if cause is None:
+                cause = CAUSES[1] if all_agree[i] else CAUSES[2] if gold_all_wrong[i] else CAUSES[3]
             rows.append({"text_id": tid, "judge": jc, "p_violation": round(float(m[jc].iloc[i]), 5),
                          "pred": int(preds[jc].iloc[i]), "human_harmful": int(y[i]),
                          "error_type": "놓친 위반" if y[i] == 1 else "잘못 잡은 위반",

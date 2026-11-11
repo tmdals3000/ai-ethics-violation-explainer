@@ -1,0 +1,14 @@
+judge,source,n,n_error,error_rate,low_n
+LlamaGuard3-1B / default,do_not_answer,2256,96,0.0426,False
+LlamaGuard3-1B / default,jigsaw,50,28,0.56,False
+LlamaGuard3-1B / default,prosocial,50,27,0.54,False
+Qwen3Guard-0.6B / default,do_not_answer,2256,76,0.0337,False
+Qwen3Guard-0.6B / default,jigsaw,50,18,0.36,False
+Qwen3Guard-0.6B / default,prosocial,50,20,0.4,False
+ShieldGemma-2B / base,do_not_answer,2256,84,0.0372,False
+ShieldGemma-2B / base,jigsaw,50,19,0.38,False
+ShieldGemma-2B / base,prosocial,50,30,0.6,False
+ShieldGemma-2B / rule_only,do_not_answer,2256,88,0.039,False
+ShieldGemma-2B / rule_only,jigsaw,50,20,0.4,False
+Team-team_v3 / rule_only,do_not_answer,2256,68,0.0301,False
+Team-team_v3 / rule_only,jigsaw,50,20,0.4,False
