@@ -34,6 +34,14 @@
 | A-priority | 우선순위 | '우선순위 변경' = 후보 집계를 max → top1(유사도 1위 후보만)로 바꾸는 것 | `effects.alt_aggregation` |
 | A-sample | dev 표본 | **DNA 는 dev 전체(2,256건, 위반 65건 2.9%)**, Jigsaw·ProsocialDialog 는 50건(라벨 비율 유지 층화). 위반 우선 추출은 하지 않음 — 치우친 표본은 PR-AUC·F1 을 실제와 다르게 만든다 | `data.dev_sample_per_source` |
 
+## 데이터 출처
+
+| 데이터 | 받은 곳 | 파일 | 받은 날짜 | 버전 · 해시 |
+|---|---|---|---|---|
+| Do-Not-Answer | `git clone --depth 1 https://github.com/libr-ai/do-not-answer C:/ml/raw/dna` (GitHub, 브랜치 기본값) | `datasets/data_en.csv` (3,951,576 바이트) | 2026-11-06 16:42 KST (clone 폴더 생성 시각) | 커밋 `460703484df354958a5e1cd7378a38fcb94a2f3e` (2024-06-07). SHA-256 `010b2905e879b06ab870e9a347a624a777420003f33dd396c448f572cad75f9b` |
+
+다시 받을 때 위 커밋을 checkout 하고 SHA-256 이 같은지 확인한다 (`sha256sum datasets/data_en.csv`).
+
 ## τ 결정 기록
 
 1. **처음 (2026-11-06, dev 50건 표본):** DNA dev 50건으로 τ = 0.10–0.40 을 비교 → top-1 이 가장 높은 τ = 0.15 (top-1 0.42, top-3 0.60) 를 골라 설정에 넣음. 표본이 50건이라 근거가 약했다.

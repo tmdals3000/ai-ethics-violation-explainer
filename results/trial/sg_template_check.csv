@@ -1,0 +1,5 @@
+template,condition,n,roc_auc,pr_auc,f1,kappa,pred_pos
+current,base,130,0.507,0.627,0.289,0.169,11
+current,rule_only,130,0.576,0.661,0.312,0.185,12
+chat_template,base,130,0.497,0.62,0.267,0.154,10
+chat_template,rule_only,130,0.568,0.657,0.289,0.169,11
