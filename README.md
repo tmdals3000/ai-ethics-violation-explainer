@@ -249,6 +249,198 @@ DNA 는 위반이 드물어 표본을 줄이면 PR-AUC·F1 이 불안정해서 �
 
 <!-- results:new -->
 
+<!-- results:exp-v1 -->
+### exp-v1 (dev, 2026-11-12)
+
+> ⚠ **모든 수치는 dev 결과다. test 는 아직 보지 않았다.** 검증 상태: `IS만` (In-Sample: 임계값·τ 를 정한 dev 로 평가해 낙관적).
+> 표본(dev): DNA 2,256건, Jigsaw 783건, PD 500건. split·규칙 트리는 임시([ASSUMPTIONS](docs/ASSUMPTIONS.md)).
+> 원자료: `results/experiments.csv` (version = `exp-v1`). 이 표는 `python scripts/record_run.py readme --version exp-v1` 로 만든다.
+
+**실험 설정**
+
+| run_id | 모델 | prompt_version | threshold | threshold_rule | tau | aggregation | 커밋 |
+|---|---|---|---|---|---|---|---|
+| B-LG | meta-llama/Llama-Guard-3-1B | official | 0.5 | 고정 0.5 | - (규칙 안 받음) | - (1회 판정) | `0b1476e` |
+| B-QG | Qwen/Qwen3Guard-Gen-0.6B | official | 0.5 | 고정 0.5 | - (규칙 안 받음) | - (1회 판정) | `0b1476e` |
+| B-SG | google/shieldgemma-2b | official | 0.5 | 고정 0.5 | 0.2 | 상위 5후보 max | `0b1476e` |
+| T1-κ | google/shieldgemma-2b | team_v1 | DNA 0.74 / Jigsaw 0.33 / PD 0.04 | 출처별 dev κ(사람 라벨) 최대, 격자 0.01 | 0.2 | 상위 5후보 max | `0b1476e` |
+
+**P1 규칙 찾기** (R1: all-roberta-large-v1)
+
+| 출처 | n | top1_acc | top3_acc | efficiency_mean | n_boundary |
+|---|---|---|---|---|---|
+| DNA | 2,256 | 0.321 | 0.479 | 0.353 | 181 |
+| Jigsaw | 783 | 0.558 | 0.600 | 0.309 | 72 |
+| PD | 500 | - | - | 0.317 | 38 |
+
+**P2 판정 비교** (base 조건)
+
+| 출처 | run_id | n | n_pos | roc_auc | pr_auc | f1 | kappa_human |
+|---|---|---|---|---|---|---|---|
+| DNA | B-LG | 2,256 | 65 | 0.763 | 0.138 | 0.177 | 0.154 |
+| DNA | B-QG | 2,256 | 65 | 0.794 | 0.254 | 0.304 | 0.284 |
+| DNA | B-SG | 2,256 | 65 | 0.516 | 0.153 | 0.242 | 0.229 |
+| DNA | T1-κ | 2,256 | 65 | 0.434 | 0.046 | 0.079 | 0.044 |
+| Jigsaw | B-LG | 783 | 400 | 0.522 | 0.536 | 0.533 | 0.012 |
+| Jigsaw | B-QG | 783 | 400 | 0.653 | 0.632 | 0.663 | 0.270 |
+| Jigsaw | B-SG | 783 | 400 | 0.690 | 0.670 | 0.529 | 0.219 |
+| Jigsaw | T1-κ | 783 | 400 | 0.691 | 0.677 | 0.691 | 0.272 |
+| PD | B-LG | 500 | 358 | 0.667 | 0.853 | 0.352 | 0.126 |
+| PD | B-QG | 500 | 358 | 0.741 | 0.877 | 0.689 | 0.291 |
+| PD | B-SG | 500 | 358 | 0.733 | 0.875 | 0.421 | 0.148 |
+| PD | T1-κ | 500 | 358 | 0.735 | 0.869 | 0.803 | 0.341 |
+
+**모델 간 Cohen's κ** (base 조건 예측)
+
+| run_id | DNA | Jigsaw | PD |
+|---|---|---|---|
+| B-LG×B-QG | 0.370 | 0.325 | 0.308 |
+| B-LG×B-SG | 0.295 | 0.207 | 0.478 |
+| B-LG×T1-κ | 0.086 | 0.104 | 0.131 |
+| B-QG×B-SG | 0.433 | 0.374 | 0.405 |
+| B-QG×T1-κ | 0.169 | 0.209 | 0.296 |
+| B-SG×T1-κ | 0.217 | 0.378 | 0.204 |
+
+**P3 원인별 잘못된 판정 건수** (규칙 찾기는 규칙을 받는 모델에만 적용)
+
+| 출처 | run_id | 규칙 찾기 | 라벨 확인 | 규칙 문장 | 판정 모델 | unclassified |
+|---|---|---|---|---|---|---|
+| DNA | B-LG | n/a | 48 | 5 | 49 | 0 |
+| DNA | B-QG | n/a | 48 | 5 | 34 | 0 |
+| DNA | B-SG | 50 | 13 | 5 | 1 | 0 |
+| DNA | T1-κ | 67 | 13 | 5 | 78 | 0 |
+| Jigsaw | B-LG | n/a | 76 | 26 | 284 | 0 |
+| Jigsaw | B-QG | n/a | 76 | 9 | 200 | 0 |
+| Jigsaw | B-SG | 137 | 13 | 34 | 124 | 0 |
+| Jigsaw | T1-κ | 129 | 13 | 32 | 109 | 0 |
+
+**P4 처음 보는 규칙** (정답 규칙이 있는 텍스트, 하락폭 = base − 규칙 제외, 회복폭 = 조건 − 규칙 제외)
+
+| 출처 | run_id | auc_base | auc_rule_excluded | auc_rule_only | auc_rule_plus_examples | auc_drop | recovery_rule_only | recovery_rule_plus_examples |
+|---|---|---|---|---|---|---|---|---|
+| DNA | B-SG | 0.516 | 0.583 | 0.568 | 0.581 | -0.068 | -0.015 | -0.002 |
+| DNA | T1-κ | 0.434 | 0.535 | 0.448 | 0.450 | -0.101 | -0.087 | -0.086 |
+| Jigsaw | B-SG | 0.690 | 0.667 | 0.735 | 0.720 | 0.023 | 0.067 | 0.053 |
+| Jigsaw | T1-κ | 0.691 | 0.674 | 0.698 | 0.695 | 0.016 | 0.024 | 0.021 |
+
+**P4 설정 변경 시 뒤집힌 판정** (dev 전체 출처 합계, 맞게 = fixed, 틀리게 = broken)
+
+| run_id | 변경 | n_flipped | n_fixed | n_broken |
+|---|---|---|---|---|
+| B-LG | 임계값 → 0.3 | 146 | 55 | 91 |
+| B-LG | 임계값 → 0.7 | 142 | 90 | 52 |
+| B-QG | 임계값 → 0.3 | 132 | 76 | 56 |
+| B-QG | 임계값 → 0.7 | 108 | 41 | 67 |
+| B-SG | 임계값 → 0.3 | 250 | 135 | 115 |
+| B-SG | 임계값 → 0.7 | 154 | 49 | 105 |
+| B-SG | 집계 → top1 | 77 | 25 | 52 |
+| T1-κ | τ → 0.15 | 81 | 30 | 51 |
+| T1-κ | τ → 0.25 | 55 | 36 | 19 |
+| T1-κ | 임계값 → 0.3 | 822 | 63 | 759 |
+| T1-κ | 임계값 → 0.7 | 617 | 202 | 415 |
+| T1-κ | 집계 → top1 | 178 | 64 | 114 |
+
+**B1 팀 프롬프트 비교 (rule_only, R0 규칙 문장)**
+
+| 출처 | run_id | 임계값_기준 | n | n_pos | roc_auc | pr_auc | threshold | f1 | kappa | pred_pos |
+|---|---|---|---|---|---|---|---|---|---|---|
+| DNA | T1 | dev F1 최대 | 2,256 | 65 | 0.448 | 0.049 | 0.600 | 0.085 | 0.043 | 217 |
+| DNA | T1 | dev κ 최대 | 2,256 | 65 | 0.448 | 0.049 | 0.820 | 0.076 | 0.048 | 67 |
+| DNA | T2 | dev F1 최대 | 2,256 | 65 | 0.515 | 0.067 | 0.600 | 0.118 | 0.083 | 122 |
+| DNA | T2 | dev κ 최대 | 2,256 | 65 | 0.515 | 0.067 | 0.600 | 0.118 | 0.083 | 122 |
+| DNA | T3 | dev F1 최대 | 2,256 | 65 | 0.611 | 0.075 | 0.870 | 0.133 | 0.114 | 40 |
+| DNA | T3 | dev κ 최대 | 2,256 | 65 | 0.611 | 0.075 | 0.870 | 0.133 | 0.114 | 40 |
+| DNA | T4 | dev F1 최대 | 2,256 | 65 | 0.452 | 0.062 | 0.660 | 0.100 | 0.058 | 215 |
+| DNA | T4 | dev κ 최대 | 2,256 | 65 | 0.452 | 0.062 | 0.760 | 0.092 | 0.064 | 66 |
+| Jigsaw | T1 | dev F1 최대 | 783 | 400 | 0.698 | 0.703 | 0.100 | 0.715 | 0.189 | 694 |
+| Jigsaw | T1 | dev κ 최대 | 783 | 400 | 0.698 | 0.703 | 0.330 | 0.671 | 0.280 | 455 |
+| Jigsaw | T2 | dev F1 최대 | 783 | 400 | 0.690 | 0.698 | 0.120 | 0.716 | 0.217 | 662 |
+| Jigsaw | T2 | dev κ 최대 | 783 | 400 | 0.690 | 0.698 | 0.330 | 0.667 | 0.251 | 478 |
+| Jigsaw | T3 | dev F1 최대 | 783 | 400 | 0.605 | 0.632 | 0.170 | 0.692 | 0.080 | 747 |
+| Jigsaw | T3 | dev κ 최대 | 783 | 400 | 0.605 | 0.632 | 0.540 | 0.637 | 0.149 | 513 |
+| Jigsaw | T4 | dev F1 최대 | 783 | 400 | 0.690 | 0.696 | 0.120 | 0.714 | 0.214 | 661 |
+| Jigsaw | T4 | dev κ 최대 | 783 | 400 | 0.690 | 0.696 | 0.330 | 0.671 | 0.258 | 479 |
+
+**B1 DNA 응답 유형별 평균 위반 확률 (rule_only)**
+
+| run_id | 0 거절 | 1 반박 | 2 양쪽 관점 | 3 주의 문구 | 4 모름·한계 | 5 지시 따름 |
+|---|---|---|---|---|---|---|
+| T1 | 0.268 | 0.307 | 0.097 | 0.386 | 0.161 | 0.250 |
+| T2 | 0.177 | 0.273 | 0.098 | 0.326 | 0.113 | 0.244 |
+| T3 | 0.205 | 0.212 | 0.165 | 0.450 | 0.115 | 0.329 |
+| T4 | 0.333 | 0.400 | 0.167 | 0.474 | 0.361 | 0.347 |
+
+**B1 DNA 위해 유형별 재현율 (잡은 위반/위반, κ 최대 임계값)**
+
+| run_id | Adult Content | Assisting illegal activities | Causing material harm by disseminating misinformation e.g. in medicine or law | Compromise privacy by leaking or inferring private information (person/individual) | Disseminating false or misleading information | Mental Health or Overreliance Crisis | Nudging or advising users to perform unethical or unsafe actions | Reducing the cost of disinformation campaigns | Risks from leaking or inferring sensitive information (organization/gov) | Social stereotypes and unfair discrimination | Toxic language (hate speech) | Treat Chatbot as a Human | 그 밖의 유형 합계 | 유해 표현 없는 유형 합계 (기밀 추측·거짓 정보·거짓 전제) |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| T1 | 1/6 (0.17) | 0/1 (0.00) | 0/2 (0.00) | 0/2 (0.00) | 0/12 (0.00) | 2/2 (1.00) | 1/4 (0.25) | 0/7 (0.00) | 0/16 (0.00) | 1/2 (0.50) | 0/3 (0.00) | 0/8 (0.00) | 5/37 (0.14) | 0/28 (0.00) |
+| T2 | 1/6 (0.17) | 0/1 (0.00) | 0/2 (0.00) | 2/2 (1.00) | 0/12 (0.00) | 2/2 (1.00) | 1/4 (0.25) | 2/7 (0.29) | 0/16 (0.00) | 2/2 (1.00) | 1/3 (0.33) | 0/8 (0.00) | 11/37 (0.30) | 0/28 (0.00) |
+| T3 | 1/6 (0.17) | 0/1 (0.00) | 0/2 (0.00) | 0/2 (0.00) | 1/12 (0.08) | 1/2 (0.50) | 1/4 (0.25) | 2/7 (0.29) | 0/16 (0.00) | 1/2 (0.50) | 0/3 (0.00) | 0/8 (0.00) | 6/37 (0.16) | 1/28 (0.04) |
+| T4 | 1/6 (0.17) | 0/1 (0.00) | 0/2 (0.00) | 0/2 (0.00) | 0/12 (0.00) | 2/2 (1.00) | 1/4 (0.25) | 1/7 (0.14) | 0/16 (0.00) | 1/2 (0.50) | 0/3 (0.00) | 0/8 (0.00) | 6/37 (0.16) | 0/28 (0.00) |
+
+**B2 팀 판정기 임계값 기준 (T1, base)**
+
+| 출처 | f1 기준 (비교) | kappa 기준 (최종) |
+|---|---|---|
+| DNA | 0.6 (점수 0.085) | 0.74 (점수 0.044) |
+| Jigsaw | 0.11 (점수 0.709) | 0.33 (점수 0.272) |
+| PD | 0.01 (점수 0.842) | 0.04 (점수 0.341) |
+
+**B3 규칙 문장 R0 vs R1 (DNA, rule_only)**
+
+| run_id | 규칙 | roc_auc | pr_auc | threshold | f1 | kappa | pred_pos |
+|---|---|---|---|---|---|---|---|
+| B-SG | R0 | 0.568 | 0.181 | 0.500 | 0.270 | 0.258 | 24 |
+| B-SG | R1 | 0.572 | 0.177 | 0.500 | 0.286 | 0.274 | 26 |
+| T2 | R0 | 0.515 | 0.067 | 0.600 | 0.118 | 0.083 | 122 |
+| T2 | R1 | 0.526 | 0.069 | 0.570 | 0.128 | 0.094 | 122 |
+
+**B3 고쳐진 판정 / 새로 틀린 판정 (R0 → R1)**
+
+| run_id | wrong_R0 | wrong_R1 | n_fixed | n_broken |
+|---|---|---|---|---|
+| B-SG | 65 | 65 | 1 | 1 |
+| T2 | 165 | 163 | 16 | 14 |
+
+**B4 DNA 위해 유형별 잘못된 판정 (잘못된/전체, base)**
+
+| 위해 유형 | B-LG | B-QG | B-SG | T1-κ |
+|---|---|---|---|---|
+| Adult Content | 5/66 (0.08) | 7/66 (0.11) | 5/66 (0.08) | 21/66 (0.32) |
+| Assisting illegal activities | 4/312 (0.01) | 13/312 (0.04) | 3/312 (0.01) | 40/312 (0.13) |
+| Causing material harm by disseminating misinformation e.g. in medicine or law | 25/150 (0.17) | 5/150 (0.03) | 8/150 (0.05) | 6/150 (0.04) |
+| Compromise privacy by leaking or inferring private information (person/individual) | 2/240 (0.01) | 0/240 (0.00) | 1/240 (0.00) | 7/240 (0.03) |
+| Disseminating false or misleading information | 12/252 (0.05) | 12/252 (0.05) | 12/252 (0.05) | 15/252 (0.06) |
+| Mental Health or Overreliance Crisis | 8/144 (0.06) | 4/144 (0.03) | 3/144 (0.02) | 9/144 (0.06) |
+| Nudging or advising users to perform unethical or unsafe actions | 10/186 (0.05) | 5/186 (0.03) | 2/186 (0.01) | 7/186 (0.04) |
+| Reducing the cost of disinformation campaigns | 6/108 (0.06) | 8/108 (0.07) | 6/108 (0.06) | 11/108 (0.10) |
+| Risks from leaking or inferring sensitive information (organization/gov) | 16/282 (0.06) | 16/282 (0.06) | 16/282 (0.06) | 17/282 (0.06) |
+| Social stereotypes and unfair discrimination | 3/228 (0.01) | 5/228 (0.02) | 3/228 (0.01) | 14/228 (0.06) |
+| Toxic language (hate speech) | 2/150 (0.01) | 4/150 (0.03) | 2/150 (0.01) | 8/150 (0.05) |
+| Treat Chatbot as a Human | 9/138 (0.07) | 8/138 (0.06) | 8/138 (0.06) | 8/138 (0.06) |
+
+**실행 시간** (RTX 3060 8GB)
+
+| run_id | 작업 | 시간 | 비고 |
+|---|---|---|---|
+| T1 | B1 T1 | 0.0분 (0초) | B1 rule_only (캐시에 없던 것만 새로 계산); n_forward=0; 전체 프롬프트 3,039 |
+| T2 | B1 T2 | 0.7분 (40초) | B1 rule_only (캐시에 없던 것만 새로 계산); n_forward=760; 전체 프롬프트 3,039 |
+| T3 | B1 T3 | 4.0분 (242초) | B1 rule_only (캐시에 없던 것만 새로 계산); n_forward=1480; 전체 프롬프트 3,039 |
+| T4 | B1 T4 | 10.4분 (624초) | B1 rule_only (캐시에 없던 것만 새로 계산); n_forward=3016; 전체 프롬프트 3,039 |
+| B-SG | B3 B-SG R0 | 0.0분 (0초) | B3 rule_only (캐시에 없던 것만 새로 계산); n_forward=0; 전체 프롬프트 2,256 |
+| B-SG | B3 B-SG R1 | 7.3분 (439초) | B3 rule_only (캐시에 없던 것만 새로 계산); n_forward=2256; 전체 프롬프트 2,256 |
+| T2 | B3 T2 R0 | 0.0분 (0초) | B3 rule_only (캐시에 없던 것만 새로 계산); n_forward=0; 전체 프롬프트 2,256 |
+| T2 | B3 T2 R1 | 8.8분 (528초) | B3 rule_only (캐시에 없던 것만 새로 계산); n_forward=2256; 전체 프롬프트 2,256 |
+| step:data | data | 0.2분 (11초) | 단계 전체 (마지막 실행); timings.csv 2026-11-12 00:46:49; do_not_answer=all;jigsaw=all;prosocial=500 |
+| step:p1 | p1 | 1.9분 (116초) | 단계 전체 (마지막 실행); timings.csv 2026-11-12 00:46:49; do_not_answer=all;jigsaw=all;prosocial=500 |
+| step:judge | judge | 0.7분 (40초) | 단계 전체 (마지막 실행); timings.csv 2026-11-12 01:50:00; do_not_answer=all;jigsaw=all;prosocial=500 |
+| step:p2 | p2 | 0.0분 (1초) | 단계 전체 (마지막 실행); timings.csv 2026-11-12 01:50:00; do_not_answer=all;jigsaw=all;prosocial=500 |
+| step:p3 | p3 | 0.0분 (1초) | 단계 전체 (마지막 실행); timings.csv 2026-11-12 01:50:00; do_not_answer=all;jigsaw=all;prosocial=500 |
+| step:p4 | p4 | 0.1분 (6초) | 단계 전체 (마지막 실행); timings.csv 2026-11-12 01:50:00; do_not_answer=all;jigsaw=all;prosocial=500 |
+| T1 | team | 0.0분 (0초) | 판정 (캐시에 없던 것만 새로 계산); model_status.csv; 전체 프롬프트 30,323 |
+<!-- /results:exp-v1 -->
+
 <!-- results:baseline-v1 -->
 ### Baseline v1 (dev, 2026-11-12)
 
