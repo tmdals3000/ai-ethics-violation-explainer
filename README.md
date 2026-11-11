@@ -249,6 +249,113 @@ DNA 는 위반이 드물어 표본을 줄이면 PR-AUC·F1 이 불안정해서 �
 
 <!-- results:new -->
 
+<!-- results:baseline-v1 -->
+### Baseline v1 (dev, 2026-11-12)
+
+> ⚠ **모든 수치는 dev 결과다. test 는 아직 보지 않았다.** 검증 상태: `IS만` (In-Sample: 임계값·τ 를 정한 dev 로 평가해 낙관적).
+> 표본(dev): DNA 2,256건, Jigsaw 783건, PD 500건. split·규칙 트리는 임시([ASSUMPTIONS](docs/ASSUMPTIONS.md)).
+> 원자료: `results/experiments.csv` (version = `baseline-v1`). 이 표는 `python scripts/record_run.py readme --version baseline-v1` 로 만든다.
+
+**실험 설정**
+
+| run_id | 모델 | prompt_version | threshold | threshold_rule | tau | aggregation | 커밋 |
+|---|---|---|---|---|---|---|---|
+| B-LG | meta-llama/Llama-Guard-3-1B | official | 0.5 | 고정 0.5 | - (규칙 안 받음) | - (1회 판정) | `0d13a7a` |
+| B-QG | Qwen/Qwen3Guard-Gen-0.6B | official | 0.5 | 고정 0.5 | - (규칙 안 받음) | - (1회 판정) | `0d13a7a` |
+| B-SG | google/shieldgemma-2b | official | 0.5 | 고정 0.5 | 0.2 | 상위 5후보 max | `0d13a7a` |
+| T1 | google/shieldgemma-2b | team_v1 | DNA 0.6 / Jigsaw 0.11 / PD 0.01 | 출처별 dev F1(위반) 최대, 격자 0.01 | 0.2 | 상위 5후보 max | `0d13a7a` |
+
+**P1 규칙 찾기** (R1: all-roberta-large-v1)
+
+| 출처 | n | top1_acc | top3_acc | efficiency_mean | n_boundary |
+|---|---|---|---|---|---|
+| DNA | 2,256 | 0.321 | 0.479 | 0.353 | 181 |
+| Jigsaw | 783 | 0.558 | 0.600 | 0.309 | 72 |
+| PD | 500 | - | - | 0.317 | 38 |
+
+**P2 판정 비교** (base 조건)
+
+| 출처 | run_id | n | n_pos | roc_auc | pr_auc | f1 | kappa_human |
+|---|---|---|---|---|---|---|---|
+| DNA | B-LG | 2,256 | 65 | 0.763 | 0.138 | 0.177 | 0.154 |
+| DNA | B-QG | 2,256 | 65 | 0.794 | 0.254 | 0.304 | 0.284 |
+| DNA | B-SG | 2,256 | 65 | 0.516 | 0.153 | 0.242 | 0.229 |
+| DNA | T1 | 2,256 | 65 | 0.434 | 0.046 | 0.085 | 0.042 |
+| Jigsaw | B-LG | 783 | 400 | 0.522 | 0.536 | 0.533 | 0.012 |
+| Jigsaw | B-QG | 783 | 400 | 0.653 | 0.632 | 0.663 | 0.270 |
+| Jigsaw | B-SG | 783 | 400 | 0.690 | 0.670 | 0.529 | 0.219 |
+| Jigsaw | T1 | 783 | 400 | 0.691 | 0.677 | 0.709 | 0.207 |
+| PD | B-LG | 500 | 358 | 0.667 | 0.853 | 0.352 | 0.126 |
+| PD | B-QG | 500 | 358 | 0.741 | 0.877 | 0.689 | 0.291 |
+| PD | B-SG | 500 | 358 | 0.733 | 0.875 | 0.421 | 0.148 |
+| PD | T1 | 500 | 358 | 0.735 | 0.869 | 0.842 | 0.254 |
+
+**모델 간 Cohen's κ** (base 조건 예측)
+
+| run_id | DNA | Jigsaw | PD |
+|---|---|---|---|
+| B-LG×B-QG | 0.370 | 0.325 | 0.308 |
+| B-LG×B-SG | 0.295 | 0.207 | 0.478 |
+| B-LG×T1 | 0.100 | 0.061 | 0.047 |
+| B-QG×B-SG | 0.433 | 0.374 | 0.405 |
+| B-QG×T1 | 0.137 | 0.171 | 0.164 |
+| B-SG×T1 | 0.155 | 0.172 | 0.071 |
+
+**P3 원인별 잘못된 판정 건수** (규칙 찾기는 규칙을 받는 모델에만 적용)
+
+| 출처 | run_id | 규칙 찾기 | 라벨 확인 | 규칙 문장 | 판정 모델 | unclassified |
+|---|---|---|---|---|---|---|
+| DNA | B-LG | n/a | 47 | 6 | 49 | 0 |
+| DNA | B-QG | n/a | 47 | 6 | 34 | 0 |
+| DNA | B-SG | 50 | 13 | 4 | 2 | 0 |
+| DNA | T1 | 109 | 13 | 4 | 133 | 0 |
+| Jigsaw | B-LG | n/a | 60 | 6 | 320 | 0 |
+| Jigsaw | B-QG | n/a | 60 | 4 | 221 | 0 |
+| Jigsaw | B-SG | 137 | 0 | 11 | 160 | 0 |
+| Jigsaw | T1 | 130 | 4 | 9 | 163 | 0 |
+
+**P4 처음 보는 규칙** (정답 규칙이 있는 텍스트, 하락폭 = base − 규칙 제외, 회복폭 = 조건 − 규칙 제외)
+
+| 출처 | run_id | auc_base | auc_rule_excluded | auc_rule_only | auc_rule_plus_examples | auc_drop | recovery_rule_only | recovery_rule_plus_examples |
+|---|---|---|---|---|---|---|---|---|
+| DNA | B-SG | 0.516 | 0.583 | 0.568 | 0.581 | -0.068 | -0.015 | -0.002 |
+| DNA | T1 | 0.434 | 0.535 | 0.448 | 0.450 | -0.101 | -0.087 | -0.086 |
+| Jigsaw | B-SG | 0.690 | 0.667 | 0.735 | 0.720 | 0.023 | 0.067 | 0.053 |
+| Jigsaw | T1 | 0.691 | 0.674 | 0.698 | 0.695 | 0.016 | 0.024 | 0.021 |
+
+**P4 설정 변경 시 뒤집힌 판정** (dev 전체 출처 합계, 맞게 = fixed, 틀리게 = broken)
+
+| run_id | 변경 | n_flipped | n_fixed | n_broken |
+|---|---|---|---|---|
+| B-LG | 임계값 → 0.3 | 146 | 55 | 91 |
+| B-LG | 임계값 → 0.7 | 142 | 90 | 52 |
+| B-QG | 임계값 → 0.3 | 132 | 76 | 56 |
+| B-QG | 임계값 → 0.7 | 108 | 41 | 67 |
+| B-SG | 임계값 → 0.3 | 250 | 135 | 115 |
+| B-SG | 임계값 → 0.7 | 154 | 49 | 105 |
+| B-SG | 집계 → top1 | 77 | 25 | 52 |
+| T1 | τ → 0.15 | 77 | 16 | 61 |
+| T1 | τ → 0.25 | 60 | 46 | 14 |
+| T1 | 임계값 → 0.3 | 919 | 165 | 754 |
+| T1 | 임계값 → 0.7 | 896 | 395 | 501 |
+| T1 | 집계 → top1 | 147 | 81 | 66 |
+
+**실행 시간** (RTX 3060 8GB)
+
+| run_id | 작업 | 시간 | 비고 |
+|---|---|---|---|
+| step:data | data | 0.2분 (11초) | 단계 전체 (마지막 실행); timings.csv 2026-11-12 00:46:49; do_not_answer=all;jigsaw=all;prosocial=500 |
+| step:p1 | p1 | 1.9분 (116초) | 단계 전체 (마지막 실행); timings.csv 2026-11-12 00:46:49; do_not_answer=all;jigsaw=all;prosocial=500 |
+| step:judge | judge | 17.7분 (1,061초) | 단계 전체 (마지막 실행); timings.csv 2026-11-12 01:05:25; do_not_answer=all;jigsaw=all;prosocial=500 |
+| step:p2 | p2 | 0.0분 (1초) | 단계 전체 (마지막 실행); timings.csv 2026-11-12 01:05:25; do_not_answer=all;jigsaw=all;prosocial=500 |
+| step:p3 | p3 | 0.0분 (1초) | 단계 전체 (마지막 실행); timings.csv 2026-11-12 01:05:25; do_not_answer=all;jigsaw=all;prosocial=500 |
+| step:p4 | p4 | 8.1분 (485초) | 단계 전체 (마지막 실행); timings.csv 2026-11-12 01:14:31; do_not_answer=all;jigsaw=all;prosocial=500 |
+| B-LG | llama_guard | 0.5분 (28초) | 판정 (캐시에 없던 것만 새로 계산); n_forward=1100; model_status.csv; 전체 프롬프트 3,539 |
+| B-QG | qwen3guard | 0.5분 (33초) | 판정 (캐시에 없던 것만 새로 계산); n_forward=1100; model_status.csv; 전체 프롬프트 3,539 |
+| B-SG | shieldgemma | 5.9분 (353초) | 판정 (캐시에 없던 것만 새로 계산); n_forward=5354; model_status.csv; 전체 프롬프트 30,323 |
+| T1 | team | 10.0분 (601초) | 판정 (캐시에 없던 것만 새로 계산); n_forward=5400; model_status.csv; 전체 프롬프트 30,323 |
+<!-- /results:baseline-v1 -->
+
 <!-- results:baseline-v0 -->
 ### Baseline v0 (dev, 2026-11-08)
 

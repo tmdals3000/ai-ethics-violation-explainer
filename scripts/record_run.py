@@ -38,7 +38,7 @@ def times_from_files(cfg):
     if len(tm):
         last = tm.groupby("step").tail(1)
         for r in last.itertuples():
-            out.append((f"step:{r.step}", r.step, "단계 전체 (마지막 실행)", None, float(r.seconds), f"timings.csv {r.timestamp}; {r.dev_sample}"))
+            out.append((f"step:{r.step}", r.step, "단계 전체 (마지막 실행)", None, float(r.seconds), f"timings.csv {r.timestamp}; {r.dev_sample_per_source}"))
     st = read_csv_safe(res / "model_status.csv")
     for r in st[st.status == "ok"].itertuples() if len(st) else []:
         out.append((RUN_ID.get(r.model, r.model), r.model, "판정 (캐시에 없던 것만 새로 계산)", int(r.n_new_forward), float(r.seconds),
@@ -105,8 +105,8 @@ def build_rows(cfg, version, date, commit):
         if kind not in ("threshold", "priority", "tau"):
             continue  # 규칙 개선안(proposal_*) 은 실험 version 에서 따로 기록
         mo = pr["change"]["model"]
-        what = {"threshold": f"임계값 → {pr['change']['threshold'][1]}", "priority": f"집계 → {pr['change'].get('aggregation', ['', ''])[1]}",
-                "tau": f"τ → {pr['change'].get('tau', ['', ''])[1]}"}[kind]
+        key = {"threshold": "threshold", "priority": "aggregation", "tau": "tau"}[kind]
+        what = f"{ {'threshold': '임계값', 'priority': '집계', 'tau': 'τ'}[kind]} → {pr['change'][key][1]}"
         for k in ["n_flipped", "n_fixed", "n_broken"]:
             add(RUN_ID[mo], "p4_flip", "", mo, k, pr[k], what)
     # 실행 시간
