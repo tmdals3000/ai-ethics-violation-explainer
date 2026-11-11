@@ -37,3 +37,7 @@ timestamp,step,seconds,dev_sample_per_source
 2026-11-12 01:05:25,p2,1.1,do_not_answer=all;jigsaw=all;prosocial=500
 2026-11-12 01:05:25,p3,1.3,do_not_answer=all;jigsaw=all;prosocial=500
 2026-11-12 01:14:31,p4,485.1,do_not_answer=all;jigsaw=all;prosocial=500
+2026-11-12 01:50:00,judge,39.7,do_not_answer=all;jigsaw=all;prosocial=500
+2026-11-12 01:50:00,p2,0.8,do_not_answer=all;jigsaw=all;prosocial=500
+2026-11-12 01:50:00,p3,0.9,do_not_answer=all;jigsaw=all;prosocial=500
+2026-11-12 01:50:00,p4,6.0,do_not_answer=all;jigsaw=all;prosocial=500

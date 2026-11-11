@@ -1,0 +1,5 @@
+run_id,rule_version,n_prompts,n_new_forward,seconds
+B-SG,R0,2256,0,0.1
+B-SG,R1,2256,2256,439.4
+T2,R0,2256,0,0.0
+T2,R1,2256,2256,527.5

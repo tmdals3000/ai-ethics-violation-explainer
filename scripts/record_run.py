@@ -48,6 +48,8 @@ def times_from_files(cfg):
 
 def build_rows(cfg, version, date, commit):
     res, rows = cfg["_res"], []
+    # 임계값 기준이 바뀌면 run_id 도 바꾼다 (exp-v1: 팀 판정기 κ 기준 → T1-κ)
+    RID = RUN_ID | ({"team": "T1-κ"} if version.startswith("exp") else {})
 
     def add(run_id, table, source, model, metric, value, note=""):
         rows.append([version, run_id, date, commit, "dev", table, source, model, metric, value, note])
@@ -55,7 +57,7 @@ def build_rows(cfg, version, date, commit):
     # 실험 설정
     th = read_csv_safe(res / "team_thresholds.csv")
     tau, agg = cfg["retrieval"]["tau"], cfg["judge"]["aggregation"]
-    for mo, rid in RUN_ID.items():
+    for mo, rid in RID.items():
         spec = cfg["judge"]["models"][mo]
         add(rid, "setup", "", mo, "hf_id", spec["hf_id"])
         add(rid, "setup", "", mo, "prompt_version", "team_v1" if mo == "team" else "official")
@@ -79,25 +81,25 @@ def build_rows(cfg, version, date, commit):
     m = read_csv_safe(res / "p2/metrics_by_source.csv")
     for r in m[(m.condition == "base") & (m.split == "dev")].itertuples():
         for k in ["n", "n_pos", "roc_auc", "pr_auc", "f1", "kappa_human"]:
-            add(RUN_ID[r.model], "p2", r.source, r.model, k, getattr(r, k), r.note if isinstance(r.note, str) else "")
+            add(RID[r.model], "p2", r.source, r.model, k, getattr(r, k), r.note if isinstance(r.note, str) else "")
     # 모델 간 κ
     for r in read_csv_safe(res / "p2/pairwise_kappa.csv").itertuples():
-        add(f"{RUN_ID[r.model_a]}×{RUN_ID[r.model_b]}", "kappa_pair", r.source, f"{r.model_a}|{r.model_b}", "kappa", r.kappa)
+        add(f"{RID[r.model_a]}×{RID[r.model_b]}", "kappa_pair", r.source, f"{r.model_a}|{r.model_b}", "kappa", r.kappa)
     # P3
     s = read_csv_safe(res / "p3/cause_summary.csv")
     n = {(r.source, r.model, r.cause): r.n for r in s.itertuples()}
     for src in sorted(s.source.unique()):
-        for mo in RUN_ID:
+        for mo in RID:
             for c in CAUSE:
                 rule_free = c == "retrieval" and not cfg["judge"]["models"][mo]["uses_rules"]
-                add(RUN_ID[mo], "p3", src, mo, c, "n/a" if rule_free else n.get((src, mo, c), 0),
+                add(RID[mo], "p3", src, mo, c, "n/a" if rule_free else n.get((src, mo, c), 0),
                     "규칙을 받지 않는 모델에는 적용 안 함" if rule_free else "")
     # P4 (있으면): 처음 보는 규칙 AUC 하락폭·회복폭, 설정을 바꿨을 때 뒤집힌 판정 수
     adr = read_csv_safe(res / "p4/auc_drop_recovery.csv")
     for r in adr[adr.group_by == "source"].itertuples() if len(adr) else []:
         for k in ["auc_base", "auc_rule_excluded", "auc_rule_only", "auc_rule_plus_examples", "auc_drop",
                   "recovery_rule_only", "recovery_rule_plus_examples"]:
-            add(RUN_ID[r.model], "p4_auc", r.group, r.model, k, getattr(r, k))
+            add(RID[r.model], "p4_auc", r.group, r.model, k, getattr(r, k))
     import json
     for f in sorted((res / "rule_proposals").glob("*.json")):
         pr = json.loads(f.read_text(encoding="utf-8"))
@@ -108,11 +110,44 @@ def build_rows(cfg, version, date, commit):
         key = {"threshold": "threshold", "priority": "aggregation", "tau": "tau"}[kind]
         what = f"{ {'threshold': '임계값', 'priority': '집계', 'tau': 'τ'}[kind]} → {pr['change'][key][1]}"
         for k in ["n_flipped", "n_fixed", "n_broken"]:
-            add(RUN_ID[mo], "p4_flip", "", mo, k, pr[k], what)
+            add(RID[mo], "p4_flip", "", mo, k, pr[k], what)
+    if version.startswith("exp"):
+        exp_rows(res / "exp_v1", res, add)
     # 실행 시간
     for rid, mo, what, n, sec, note in (TIMES_V0 if version == "baseline-v0" else times_from_files(cfg)):
         add(rid, "time", "", mo, "seconds", sec, f"{what}; n_forward={n}; {note}" if n else f"{what}; {note}")
     return pd.DataFrame(rows, columns=COLS)
+
+
+def exp_rows(d, res, add):
+    """exp-v1 실험 결과 (scripts/exp_v1.py) 를 long format 으로."""
+    b1 = read_csv_safe(d / "b1_prompt_compare.csv")
+    for r in b1.itertuples():
+        for k in ["n", "n_pos", "roc_auc", "pr_auc", "threshold", "f1", "kappa", "pred_pos"]:
+            add(r.run_id, "b1_prompt", r.source, r.prompt_version, k, getattr(r, k), r.threshold_rule)
+    for r in read_csv_safe(d / "b1_by_action.csv").itertuples():
+        add(r.run_id, "b1_action", "do_not_answer", r.prompt_version, r.action, r.mean_p, f"n={r.n}, 위반={r.n_harmful}")
+    for r in read_csv_safe(d / "b1_harm_recall.csv").itertuples():
+        add(r.run_id, "b1_recall", "do_not_answer", r.prompt_version, r.group, f"{r.caught}/{r.n_pos} ({r.recall:.2f})", f"임계값 {r.threshold:g}")
+    th = read_csv_safe(res / "team_thresholds.csv")
+    for r in th.itertuples() if "criterion" in th else []:
+        add("T1-κ", "b2_threshold", r.source, r.prompt_version, f"{r.criterion} 기준 (최종)", f"{r.per_source_threshold:g} (점수 {r.per_source_dev_score:.3f})")
+        add("T1-κ", "b2_threshold", r.source, r.prompt_version, f"{r.alt_criterion} 기준 (비교)", f"{r.alt_per_source_threshold:g} (점수 {r.alt_per_source_dev_score:.3f})")
+    b3, fl = read_csv_safe(d / "b3_rule_compare.csv"), read_csv_safe(d / "b3_flips.csv")
+    for r in b3.itertuples():
+        for k in ["roc_auc", "pr_auc", "threshold", "f1", "kappa", "pred_pos"]:
+            add(r.run_id, "b3_rule", r.source, r.model, k, getattr(r, k), r.rule_version)
+    for r in fl.itertuples():
+        for k in ["wrong_R0", "wrong_R1", "n_fixed", "n_broken"]:
+            add(r.run_id, "b3_flip", "do_not_answer", r.model, k, getattr(r, k))
+    for name, f in [("B1", "b1_times.csv"), ("B3", "b3_times.csv")]:
+        for r in read_csv_safe(d / f).itertuples():
+            what = f"{name} {r.run_id}" + (f" {r.rule_version}" if hasattr(r, "rule_version") else "")
+            add(r.run_id, "time", "", what, "seconds", r.seconds,
+                f"{name} rule_only (캐시에 없던 것만 새로 계산); n_forward={r.n_new_forward}; 전체 프롬프트 {r.n_prompts:,}")
+    for r in read_csv_safe(d / "b4_harm_errors.csv").itertuples():
+        add(RUN_ID.get(r.model, r.model) if r.model != "team" else "T1-κ", "b4_harm", "do_not_answer", r.model, r.types_of_harm,
+            f"{r.wrong}/{r.n} ({r.wrong / r.n:.2f})", f"놓친 위반 {r.missed}/{r.n_pos}")
 
 
 def record(cfg, a):
@@ -152,6 +187,27 @@ def table(df, index, columns, order_cols=None, raw=False):
     return "\n".join(lines)
 
 
+def exp_block(e):
+    """exp-v1 표: B1 프롬프트, 응답 유형별 평균 확률, 유해 표현 없는 유형 재현율, B2 임계값, B3 규칙 문장, B4 위해 유형별 오류."""
+    out = []
+
+    def sec(title, df, index, cols=None, raw=False):
+        if len(df):
+            out.append(f"**{title}**\n\n" + table(df, index, "metric", cols, raw=raw) + "\n")
+    b1 = e[e.table == "b1_prompt"].assign(임계값_기준=lambda x: x.note)
+    sec("B1 팀 프롬프트 비교 (rule_only, R0 규칙 문장)", b1, ["출처", "run_id", "임계값_기준"],
+        ["n", "n_pos", "roc_auc", "pr_auc", "threshold", "f1", "kappa", "pred_pos"])
+    sec("B1 DNA 응답 유형별 평균 위반 확률 (rule_only)", e[e.table == "b1_action"], ["run_id"])
+    sec("B1 DNA 위해 유형별 재현율 (잡은 위반/위반, κ 최대 임계값)", e[e.table == "b1_recall"], ["run_id"], raw=True)
+    sec("B2 팀 판정기 임계값 기준 (T1, base)", e[e.table == "b2_threshold"], ["출처"], raw=True)
+    b3 = e[e.table == "b3_rule"].assign(규칙=lambda x: x.note)
+    sec("B3 규칙 문장 R0 vs R1 (DNA, rule_only)", b3, ["run_id", "규칙"], ["roc_auc", "pr_auc", "threshold", "f1", "kappa", "pred_pos"])
+    sec("B3 고쳐진 판정 / 새로 틀린 판정 (R0 → R1)", e[e.table == "b3_flip"], ["run_id"], ["wrong_R0", "wrong_R1", "n_fixed", "n_broken"])
+    b4 = e[e.table == "b4_harm"].rename(columns={"metric": "위해 유형", "run_id": "metric"})
+    sec("B4 DNA 위해 유형별 잘못된 판정 (잘못된/전체, base)", b4, ["위해 유형"], raw=True)
+    return "\n".join(out) + ("\n" if out else "")
+
+
 def readme_block(cfg, version):
     e = read_csv_safe(cfg["_res"] / "experiments.csv", keep_default_na=False)  # "n/a" 를 빈 값으로 바꾸지 않게
     e = e[e.version == version].copy()
@@ -184,6 +240,7 @@ def readme_block(cfg, version):
     if len(p4f):
         p4 += "**P4 설정 변경 시 뒤집힌 판정** (dev 전체 출처 합계, 맞게 = fixed, 틀리게 = broken)\n\n" + table(
             p4f, ["run_id", "변경"], "metric", ["n_flipped", "n_fixed", "n_broken"]) + "\n\n"
+    ex = exp_block(e) if version.startswith("exp") else ""
     tm = e[e.table == "time"]
     tml = ["| run_id | 작업 | 시간 | 비고 |", "|---|---|---|---|"]
     for r in tm.itertuples():
@@ -216,7 +273,7 @@ def readme_block(cfg, version):
 
 {p3}
 
-{p4}**실행 시간** (RTX 3060 8GB)
+{p4}{ex}**실행 시간** (RTX 3060 8GB)
 
 {chr(10).join(tml)}
 <!-- /results:{version} -->"""

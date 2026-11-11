@@ -5,21 +5,21 @@ dev,do_not_answer,shieldgemma,base,2256,65,26,0.0306,0.5155,0.1529,0.2418,0.2291
 dev,do_not_answer,shieldgemma,rule_excluded,2256,65,20,0.0306,0.583,0.1453,0.1882,0.1771,,
 dev,do_not_answer,shieldgemma,rule_only,2256,65,24,0.0288,0.5676,0.1811,0.2697,0.2581,,
 dev,do_not_answer,shieldgemma,rule_plus_examples,2256,65,58,0.0465,0.5811,0.1058,0.1463,0.1225,,
-dev,do_not_answer,team,base,2256,65,218,0.1148,0.4342,0.0459,0.0848,0.0423,,
-dev,do_not_answer,team,rule_excluded,2256,65,82,0.0581,0.5353,0.0634,0.1088,0.0792,,
-dev,do_not_answer,team,rule_only,2256,65,217,0.1144,0.4482,0.049,0.0851,0.0427,,
-dev,do_not_answer,team,rule_plus_examples,2256,65,241,0.1294,0.4497,0.0472,0.0458,0.0004,,
+dev,do_not_answer,team,base,2256,65,112,0.0723,0.4342,0.0459,0.0791,0.0442,,
+dev,do_not_answer,team,rule_excluded,2256,65,36,0.0395,0.5353,0.0634,0.1188,0.1003,,
+dev,do_not_answer,team,rule_only,2256,65,107,0.0709,0.4482,0.049,0.0698,0.0352,,
+dev,do_not_answer,team,rule_plus_examples,2256,65,122,0.0785,0.4497,0.0472,0.0535,0.0165,,
 dev,jigsaw,llama_guard,base,783,400,426,0.493,0.5216,0.5357,0.5327,0.0122,,PR-AUC 는 DNA 중심 지표 (참고값)
 dev,jigsaw,qwen3guard,base,783,400,445,0.364,0.653,0.6316,0.6627,0.2699,,PR-AUC 는 DNA 중심 지표 (참고값)
 dev,jigsaw,shieldgemma,base,783,400,254,0.3934,0.6902,0.6695,0.5291,0.2192,,PR-AUC 는 DNA 중심 지표 (참고값)
 dev,jigsaw,shieldgemma,rule_excluded,783,400,226,0.4393,0.6674,0.6648,0.4505,0.1293,,PR-AUC 는 DNA 중심 지표 (참고값)
 dev,jigsaw,shieldgemma,rule_only,783,400,101,0.3997,0.7346,0.7518,0.3752,0.2132,,PR-AUC 는 DNA 중심 지표 (참고값)
 dev,jigsaw,shieldgemma,rule_plus_examples,783,400,229,0.3691,0.72,0.7169,0.5405,0.2684,,PR-AUC 는 DNA 중심 지표 (참고값)
-dev,jigsaw,team,base,783,400,652,0.3908,0.6906,0.6774,0.7091,0.2069,,PR-AUC 는 DNA 중심 지표 (참고값)
-dev,jigsaw,team,rule_excluded,783,400,421,0.3768,0.6742,0.665,0.6407,0.2453,,PR-AUC 는 DNA 중심 지표 (참고값)
-dev,jigsaw,team,rule_only,783,400,675,0.3946,0.6984,0.7034,0.7126,0.1981,,PR-AUC 는 DNA 중심 지표 (참고값)
-dev,jigsaw,team,rule_plus_examples,783,400,769,0.4713,0.6948,0.6899,0.6843,0.0373,,PR-AUC 는 DNA 중심 지표 (참고값)
+dev,jigsaw,team,base,783,400,517,0.3614,0.6906,0.6774,0.6914,0.2721,,PR-AUC 는 DNA 중심 지표 (참고값)
+dev,jigsaw,team,rule_excluded,783,400,297,0.3997,0.6742,0.665,0.5509,0.2047,,PR-AUC 는 DNA 중심 지표 (참고값)
+dev,jigsaw,team,rule_only,783,400,455,0.3589,0.6984,0.7034,0.6713,0.2797,,PR-AUC 는 DNA 중심 지표 (참고값)
+dev,jigsaw,team,rule_plus_examples,783,400,605,0.3768,0.6948,0.6899,0.7065,0.2375,,PR-AUC 는 DNA 중심 지표 (참고값)
 dev,prosocial,llama_guard,base,500,358,79,0.566,0.6672,0.8529,0.3524,0.1262,,PR-AUC 는 DNA 중심 지표 (참고값)
 dev,prosocial,qwen3guard,base,500,358,231,0.366,0.7412,0.8774,0.6893,0.2913,,PR-AUC 는 DNA 중심 지표 (참고값)
 dev,prosocial,shieldgemma,base,500,358,103,0.534,0.7329,0.8751,0.4208,0.1483,,PR-AUC 는 DNA 중심 지표 (참고값)
-dev,prosocial,team,base,500,358,438,0.252,0.7348,0.8688,0.8417,0.2535,,PR-AUC 는 DNA 중심 지표 (참고값)
+dev,prosocial,team,base,500,358,344,0.276,0.7348,0.8688,0.8034,0.3409,,PR-AUC 는 DNA 중심 지표 (참고값)

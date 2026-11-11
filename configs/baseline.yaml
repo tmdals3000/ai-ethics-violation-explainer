@@ -50,7 +50,7 @@ judge:
     shieldgemma: {hf_id: google/shieldgemma-2b, uses_rules: true}
     team: {hf_id: google/shieldgemma-2b, uses_rules: true}
   team_prompt_versions: [team_v1]  # 확인 후 [team_v1, team_v2, team_v3]
-  team_threshold_metric: f1       # 팀 판정기 임계값을 고르는 기준: f1 | kappa (baseline-v1 까지 f1, exp-v1 부터 kappa)
+  team_threshold_metric: kappa      # 팀 판정기 임계값을 고르는 기준: f1 | kappa (baseline-v1 까지 f1, exp-v1 부터 kappa)
   team_threshold_step: 0.01     # 팀 판정기 임계값 후보 격자 0.01–0.99. dev F1(위반) 최대를 출처별로 고름 (공통 임계값은 비교용)
   examples_per_label: 2         # rule_plus_examples 에서 위반·비위반 예시 수
 

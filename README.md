@@ -32,7 +32,7 @@ Project 4 · Baseline v0 (`baseline-v0`, 2026-11-08)
 | `scripts/` | `run.py` 전체 실행기 · `record_run.py` 실험 결과 기록·README 표 생성 · `trial_analysis.py` 시험 실행 분석 |
 | `app/app.py` | Streamlit 화면 4탭. 유해 원문은 기본으로 가리고 눌렀을 때만 보인다 |
 | `results/` | 지표·판정 결과 (**원문 없음**, `text_id` 만). 실험 원장은 `results/experiments.csv` |
-| `docs/` | [`ASSUMPTIONS.md`](docs/ASSUMPTIONS.md) 임시 결정 · [`BASELINE_REPORT.md`](docs/BASELINE_REPORT.md) 결과 보고서 · [`EDA.md`](docs/EDA.md) 데이터 탐색 · [`TEAM_SYNC.md`](docs/TEAM_SYNC.md) 팀원 브랜치와 차이 |
+| `docs/` | [`ASSUMPTIONS.md`](docs/ASSUMPTIONS.md) 임시 결정 · [`BASELINE_REPORT.md`](docs/BASELINE_REPORT.md) 결과 보고서 · [`EDA.md`](docs/EDA.md) 데이터 탐색 · [`TEAM_SYNC.md`](docs/TEAM_SYNC.md) 팀원 브랜치와 차이 · [`EXP_V1.md`](docs/EXP_V1.md) 개선 실험 exp-v1 |
 | `tests/` | pytest 17개. 가짜 데이터는 `tests/fixtures` 에만 |
 
 원본 데이터·가공 데이터·모델 캐시는 저장소 밖(`C:/ml/...`)에 두며 커밋하지 않는다.
