@@ -75,3 +75,9 @@ P2는 비교를 위해 기준 모델들을 함께 표시한다. P3·P4 및 맞�
 & C:/ml/aiethics/.venv/Scripts/python.exe scripts/verify_app.py
 & C:/ml/aiethics/.venv/Scripts/streamlit.exe run app/app.py
 ```
+
+## 기록 정정 메모 (2026-11-12)
+
+`runs/baseline_v2/experiments.csv`의 baseline-v2 행은 커밋 전에 기록되어 `commit` 값이 `99da523…+workingtree`다.
+장부는 지우거나 고치지 않으므로 그대로 둔다. 이 작업 트리를 그대로 커밋한 것이 **`7426d68`** 이며,
+baseline-v2 수치를 재현하려면 이 커밋을 쓴다.
