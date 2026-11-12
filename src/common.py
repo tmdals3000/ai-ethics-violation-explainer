@@ -8,7 +8,7 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def load_config(path=None):
+def load_config(path=None, *, dashboard=False):
     cfg = yaml.safe_load(open(path or ROOT / "configs/baseline.yaml", encoding="utf-8"))
     # .env 에서 HF_TOKEN 등을 읽는다 (토큰은 환경 변수로만 사용)
     try:
@@ -16,6 +16,9 @@ def load_config(path=None):
         load_dotenv(ROOT / ".env")
     except ImportError:
         pass
+    if dashboard:
+        from src.dashboard_snapshot import configure
+        configure(cfg, ROOT)
     # HF 라이브러리를 import 하기 전에 캐시 위치를 고정한다
     os.environ.setdefault("HF_HOME", cfg["paths"]["hf_home"])
     os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")

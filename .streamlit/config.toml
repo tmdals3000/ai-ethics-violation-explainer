@@ -1,0 +1,16 @@
+[theme]
+base = "light"
+primaryColor = "#277e70"
+backgroundColor = "#f5f7fa"
+secondaryBackgroundColor = "#ffffff"
+textColor = "#25334a"
+font = "sans serif"
+
+[client]
+toolbarMode = "minimal"
+
+[browser]
+gatherUsageStats = false
+
+[server]
+folderWatchBlacklist = ["data", "runs", ".git"]

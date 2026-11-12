@@ -47,6 +47,9 @@ check('PD without gold rules')
 widget(app.selectbox, '조건').select('base').run()
 widget(app.toggle, '판정 임계값 직접 지정').set_value(True).run()
 widget(app.slider, '새 임계값').set_value(.9).run()
+check('threshold scenario')
+event('p4_flow', {'flow_choice': {'transition': ['broken']}})
+assert widget(app.selectbox, '변화 사례').value == 'broken'
 widget(app.button, '원래 값으로 되돌리기').click().run()
 check('reset')
 assert not widget(app.toggle, '판정 임계값 직접 지정').value
@@ -56,7 +59,7 @@ assert 'team' in model.options, '현재 팀 프롬프트의 judge 실행을 먼�
 model.select('team').run()
 check('active team prompt')
 widget(app.multiselect, '출처').set_value(['do_not_answer']).run()
-cfg = load_config()
+cfg = load_config(dashboard=True)
 texts, _, _, sample = data.load(cfg)
 ids = texts[(texts.source == 'do_not_answer') & texts.text_id.isin(sample.text_id)].text_id.tolist()
 event('p2_scatter', {'pair_text': {'text_id': [ids[0]]}})
@@ -65,6 +68,13 @@ event('p3_map', {'map_text': {'text_id': [ids[1]]}, 'brush': {}})
 assert app.session_state.sel == ids[1]
 event('p1_tree', {'rule_node': {'node_id': ['H01']}})
 assert widget(app.selectbox, '노드').value == 'H01'
+widget(app.toggle, '선택 가지 확대').set_value(True).run()
+check('hierarchy branch focus')
+widget(app.toggle, '선택 가지 확대').set_value(False).run()
 event('p3_causes', {'cause_pick': {'cause': ['retrieval']}})
 assert widget(app.selectbox, '강조할 원인').value == 'retrieval'
 print('ALL APP CHECKS PASSED', flush=True)
+if cfg.get('_dashboard_snapshot'):
+    assert not {'torch', 'transformers', 'sentence_transformers'}.intersection(sys.modules)
+    assert widget(app.button, '다시 판정 (유사도 재계산 + 팀 판정기, GPU 사용)').disabled
+    print('SNAPSHOT: no model imports; GPU inference disabled', flush=True)

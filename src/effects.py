@@ -124,6 +124,8 @@ def live_settings(cfg, tgt, nodes, sw, m, judgments, model, tau, aggregation, th
         known = {(r.text_id, r.candidate_rule_id): r.p_violation for r in raw.itertuples()}
         missing = [it for it in items if (it["text_id"], it["candidate_rule_id"]) not in known]
         if missing:
+            if cfg.get("_dashboard_snapshot"):
+                raise ValueError("이 설정에는 저장되지 않은 후보 판정이 필요합니다. 저장 결과 모드에서는 기본 τ 또는 판정이 저장된 설정을 선택하세요.")
             p = judges.score_rule_model(cfg, missing, model, pv)
             known.update({(it["text_id"], it["candidate_rule_id"]): round(float(v), 6) for it, v in zip(missing, p)})
         jj = pd.DataFrame(items)[["text_id", "condition", "candidate_rule_id"]].assign(model=model, prompt_version=pv)
@@ -221,6 +223,8 @@ def run(cfg):
 def rule_edit(cfg, nid, new, examples=None, text_ids=None):
     """규칙 문장 하나를 고쳐 유사도 다시 계산 → BFS → 팀 판정기 base·rule_only 다시 판정 → 전후 비교.
     화면의 '다시 판정' 버튼도 이 함수를 부른다."""
+    if cfg.get("_dashboard_snapshot"):
+        raise ValueError("저장 결과에는 원문이 없어 새 규칙을 재판정할 수 없습니다. 전체 실행 환경을 사용하세요.")
     m, _ = load_joined(cfg)
     texts, nodes, _, sample = data.load(cfg)
     tgt = retrieval.targets(cfg, texts, sample)

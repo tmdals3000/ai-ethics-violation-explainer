@@ -1,5 +1,135 @@
 # Baseline 정리: 텍스트 AI 윤리 규칙 위반 판정 모델을 설명하는 시스템
 
+**로컬 실행:** `SeungMin` 브랜치를 받아 처음 한 번 [`setup_dashboard.cmd`](setup_dashboard.cmd), 이후 [`run_dashboard.cmd`](run_dashboard.cmd)를 실행한다 → `http://localhost:8501`. **Python 3.12만 준비하면 GPU·원본 데이터·토큰 없이 실제 dev 결과로 P1~P4를 열 수 있다.** [복사해서 실행할 설치 명령과 다른 OS 안내](docs/LOCAL_RUN.md). PDF의 세 참고 시스템을 적용한 [화면 설계](docs/VISUAL_DESIGN.md)도 정리했다.
+
+## 전체 시스템 구조
+
+현재 구현은 Python 분석 파이프라인과 Streamlit 화면으로 구성된다. 실선은 데이터·결과 흐름, 점선은 실행·설정·모델 호출을 뜻한다.
+
+```mermaid
+flowchart LR
+    subgraph INPUT["입력 데이터"]
+        DNA["Do-Not-Answer<br/>질문 · 6개 LLM 응답 · 사람 라벨"]
+        JIG["Jigsaw ACRC<br/>댓글 · 규칙 · 위반/비위반 예시"]
+        PD["ProsocialDialog<br/>대화 · 안전 라벨"]
+        TA[("조교 파일 · 제공 시 우선<br/>splits / similarity / coords / judgments")]
+    end
+
+    subgraph EXEC["실행·설정"]
+        CFG["configs/baseline.yaml<br/>경로 · 표본 · τ · 모델 · T2 설정"]
+        CLI["scripts/run.py<br/>data → p1 → judge → p2 → p3 → p4"]
+    end
+
+    subgraph PIPE["분석 파이프라인"]
+        PREP["P0 · src/data.py<br/>응답 펼치기 · 라벨 정리<br/>split · 규칙 트리 · 예시 준비"]
+        LOAD["data.load / adapters.read<br/>조교 파일 우선 · 없으면 자체 데이터"]
+        P1["P1 · src/retrieval.py<br/>임베딩 유사도 + BFS<br/>상위 후보 · 정답 경로 · 경계 사례"]
+        JUDGE["src/judges.py<br/>후보·조건별 판정 토큰 확률<br/>base / rule_excluded<br/>rule_only / rule_plus_examples"]
+        AGG["확률 집계·임계값 적용<br/>규칙 모델의 후보 확률 max<br/>기준 모델 0.5 / 팀은 출처별 base dev κ"]
+        P2["P2 · src/metrics.py<br/>ROC/PR-AUC · F1 · 사람 κ<br/>모델 쌍 κ 6개 · 묶음별 오류율"]
+        P3["P3 · src/diagnose.py<br/>규칙 찾기 → 라벨 확인<br/>→ 규칙 문장 → 판정 모델<br/>순서대로 오류 원인 분류"]
+        P4["P4 · src/effects.py<br/>임계값 · τ · 후보 집계 변경<br/>전후 지표 · 고쳐진 판정 · 새 오류"]
+        EDIT["규칙 문장·예시 수정<br/>유사도 → BFS → 팀 T2 재판정<br/>출처별 원래 임계값 유지"]
+    end
+
+    subgraph MODELS["로컬 모델 · Hugging Face / CUDA"]
+        EMB["all-roberta-large-v1<br/>텍스트·규칙 임베딩"]
+        LG["Llama Guard 3 1B<br/>자체 윤리 범주로 판정"]
+        QG["Qwen3Guard-Gen-0.6B<br/>자체 윤리 범주로 판정"]
+        SG["ShieldGemma-2B<br/>입력한 규칙 문장으로 판정"]
+        TEAM["팀 판정기 T2<br/>ShieldGemma-2B 가중치<br/>+ team_v2 프롬프트"]
+    end
+
+    subgraph STORE["저장·실험 기록"]
+        DERIVED[("C:/ml/aiethics/data/derived<br/>texts · nodes · examples · splits<br/>similarity · coords")]
+        SNAPSHOT[("assets/dev_dashboard.zip<br/>화면용 실제 dev 메타데이터<br/>원문·맥락·예시 제외")]
+        CACHE[("data/cache/judgments.sqlite<br/>동일 프롬프트 확률 재사용")]
+        RESULTS[("runs/baseline_v2<br/>judgments.csv · p1/p2/p3/p4 결과")]
+        PROPS[("rule_proposals/*.json<br/>수정 근거 · 전후 지표 · 뒤집힌 판정")]
+        RECORD["scripts/record_run.py<br/>버전별 결과 기록 · README 표 생성"]
+        LEDGER[("experiments.csv<br/>이전 기록 보존 · 새 버전 추가")]
+        REPORT["README 결과 표"]
+    end
+
+    subgraph UI["Streamlit · app/app.py"]
+        APP["저장된 분석 데이터 읽기<br/>파일 변경 시 화면 캐시 갱신"]
+        STATE["공통 필터·선택 상태<br/>출처 · 분할 · 규칙 · 모델 · 정오<br/>text_id 연동 · 원문 기본 가림"]
+        VIEW1["P1 규칙 찾기 뷰<br/>계층 블록/트리 · BFS/정답 경로 · τ"]
+        VIEW2["P2 판정 비교 뷰<br/>오류율 행렬 · 모델 확률 산점도"]
+        VIEW3["P3 오류 진단 뷰<br/>원인 막대 · 지도 · 진단 창"]
+        VIEW4["P4 수정 효과 뷰<br/>설정 변경 · 전후 흐름 · 규칙 편집 · 수정안 저장"]
+    end
+
+    CFG -. "설정" .-> CLI
+    CFG -. "설정" .-> APP
+    CLI -. "선택 단계 순차 실행" .-> PIPE
+    DNA --> PREP
+    JIG --> PREP
+    PD --> PREP
+    TA -. "split 적용" .-> PREP
+    PREP --> DERIVED
+    DERIVED --> LOAD
+    TA -. "제공 시 우선 사용" .-> LOAD
+    LOAD --> P1
+    LOAD --> JUDGE
+
+    P1 -. "유사도 계산" .-> EMB
+    P1 -- "후보 규칙" --> JUDGE
+    P1 -- "정답 규칙 순위" --> P3
+    P1 -- "검색 결과" --> RESULTS
+    P1 -- "자체 유사도·좌표 계산 시" --> DERIVED
+    JUDGE -. "규칙 입력 없음" .-> LG
+    JUDGE -. "규칙 입력 없음" .-> QG
+    JUDGE -. "규칙 문장 입력" .-> SG
+    JUDGE -. "규칙 문장 입력" .-> TEAM
+    JUDGE <--> CACHE
+    JUDGE --> AGG
+    AGG --> RESULTS
+    AGG --> P2
+    AGG --> P3
+    AGG --> P4
+    P2 --> RESULTS
+    P3 --> RESULTS
+    P4 --> RESULTS
+    P4 -- "문장·예시 변경" --> EDIT
+    P4 -. "τ 변경 시 신규 후보 재판정" .-> JUDGE
+    EDIT -. "유사도 재계산" .-> EMB
+    EDIT -. "재판정" .-> TEAM
+    EDIT <--> CACHE
+    EDIT -- "전후 비교" --> P4
+    P4 --> PROPS
+
+    RESULTS --> RECORD
+    PROPS --> RECORD
+    RECORD --> LEDGER
+    LEDGER --> REPORT
+    LOAD --> APP
+    SNAPSHOT -- "앱에서 저장 결과 복원" --> LOAD
+    RESULTS --> APP
+    PROPS --> APP
+    APP --> STATE
+    STATE --> VIEW1
+    STATE --> VIEW2
+    STATE --> VIEW3
+    STATE --> VIEW4
+    VIEW1 -. "τ·검색 재계산" .-> P1
+    VIEW2 -. "필터 범위 지표 재계산" .-> P2
+    VIEW3 -. "진단 k·원인 분포 재계산" .-> P3
+    VIEW4 -. "임계값·τ·집계" .-> P4
+    VIEW4 -. "규칙·예시 편집" .-> EDIT
+```
+
+기준 판정기 3종과 팀 T2는 추론만 수행한다. 네 실험 조건은 규칙 문장을 입력받는 ShieldGemma·팀 판정기에 적용한다. ProsocialDialog는 정답 규칙이 없어 `base` 판정만 사용하며, 정답 규칙이 필요한 P1 정확도·P3 원인 진단은 DNA·Jigsaw에 적용한다. 현재 기록은 dev 기준이며 test는 명시적으로 허용한 뒤 평가한다.
+
+### 실행 화면
+
+AdversaFlow의 연결 탐색, Blocks의 계층 분석, What-If Tool의 시나리오 비교를 과제의 P1~P4에 적용했다. 아래는 저장된 실제 dev 결과로 실행한 화면이다. 논문별 참고 범위·실행 방법·검증 기록은 [화면 설계 문서](docs/VISUAL_DESIGN.md)에 있다.
+
+![P3 오류 원인 분포와 사례 지도](docs/screenshots/p3.png)
+
+[P1 계층 탐색](docs/screenshots/p1.png) · [P2 모델 비교](docs/screenshots/p2.png) · [P3 오류 진단](docs/screenshots/p3.png) · [P4 임계값 변경 전후](docs/screenshots/p4.png)
+
+
 Project 4 · 현재 개발 기준: Baseline v2 (2026-11-12, `team_v2`)
 변경 내역과 검증 범위: [BASELINE_UPDATE.md](docs/BASELINE_UPDATE.md). 아래 v0·v1·exp-v1 결과 블록은 당시 기록을 보존한다.
 판정이 틀렸을 때 **규칙 찾기 · 규칙 문장 · 판정 모델 · 사람 라벨** 중 어디가 문제인지 밝히고, 고치면 얼마나 나아지는지 확인한다
@@ -24,6 +154,8 @@ Project 4 · 현재 개발 기준: Baseline v2 (2026-11-12, `team_v2`)
 
 ## 저장소 지도 · 바로 실행하기
 
+화면만 실행하려면 위의 `setup_dashboard.cmd` → `run_dashboard.cmd`를 사용한다. 아래 전체 설치·실험 절차는 원문 확인과 GPU 재판정까지 준비할 때 사용한다.
+
 > 1장부터는 연구 정리입니다. 코드를 보러 왔다면 이 절부터 읽으면 됩니다.
 
 | 폴더 | 무엇 |
@@ -31,11 +163,13 @@ Project 4 · 현재 개발 기준: Baseline v2 (2026-11-12, `team_v2`)
 | `configs/baseline.yaml` | 모든 설정 한 곳 — 경로, 표본 크기, τ, 임계값, 모델, 집계 방식. 모든 단계가 이 파일 하나를 읽는다 |
 | `src/` | `data` 데이터 준비 · `retrieval` P1 · `judges` 판정 · `metrics` P2 · `diagnose` P3 · `effects` P4 · `adapters` 조교 파일 읽기 · `common` 공통 |
 | `scripts/` | `run.py` 전체 실행기 · `record_run.py` 실험 결과 기록·README 표 생성 · `trial_analysis.py` 시험 실행 분석 |
-| `app/app.py` | Streamlit 화면 4탭. 유해 원문은 기본으로 가리고 눌렀을 때만 보인다 |
+| `app/app.py` | Streamlit 화면 4탭. 전체 환경의 유해 원문은 기본으로 가리고 눌렀을 때만 보인다. 저장 결과 모드에는 원문이 없다 |
+| `assets/dev_dashboard.zip` | 다른 PC에서 화면을 열기 위한 실제 dev 메타데이터. 원문·맥락·원문 예시와 test 제외 |
+| `requirements-dashboard.txt` · `setup_dashboard.cmd` · `run_dashboard.cmd` | GPU 없는 화면 환경 설치·실행. [로컬 실행 안내](docs/LOCAL_RUN.md) |
 | `results/` | v0·v1·exp-v1의 이전 결과 보존 |
 | `runs/baseline_v2/` | 현재 판정·지표·수정안 (**데이터 원문 없음**, `text_id` 중심). 현재 원장은 이 폴더의 `experiments.csv` |
 | `docs/` | [`ASSUMPTIONS.md`](docs/ASSUMPTIONS.md) 임시 결정 · [`BASELINE_REPORT.md`](docs/BASELINE_REPORT.md) 결과 보고서 · [`EDA.md`](docs/EDA.md) 데이터 탐색 · [`TEAM_SYNC.md`](docs/TEAM_SYNC.md) 팀원 브랜치와 차이 · [`EXP_V1.md`](docs/EXP_V1.md) 개선 실험 exp-v1 |
-| `tests/` | pytest 26개. 테스트 안에서 만든 작은 데이터와 `tests/fixtures` 사용 |
+| `tests/` | pytest. 테스트 안에서 만든 작은 데이터와 `tests/fixtures` 사용 |
 
 원본·가공 데이터·가중치는 `C:/ml/...`, 판정 캐시는 `data/cache/`에 두며 커밋하지 않는다.
 
