@@ -1,0 +1,4 @@
+timestamp,step,seconds,dev_sample_per_source
+2026-11-12 10:08:47,p2,2.9,do_not_answer=all;jigsaw=all;prosocial=500
+2026-11-12 10:08:47,p3,0.8,do_not_answer=all;jigsaw=all;prosocial=500
+2026-11-12 10:08:47,p4,1512.8,do_not_answer=all;jigsaw=all;prosocial=500

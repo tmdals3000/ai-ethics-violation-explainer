@@ -24,6 +24,7 @@ def load_config(path=None):
     cfg["_data"] = Path(p["data_dir"])
     cfg["_ta"] = Path(p["ta_dir"])
     cfg["_res"] = ROOT / p["results_dir"]
+    cfg["_cache"] = ROOT / p["cache_dir"] if p.get("cache_dir") else cfg["_data"] / "cache"
     for d in (cfg["_data"], cfg["_res"]):
         d.mkdir(parents=True, exist_ok=True)
     return cfg

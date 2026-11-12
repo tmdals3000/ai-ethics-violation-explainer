@@ -1,0 +1,8 @@
+{
+  "reason": "Existing results directory denied writes; exported into a new owned version directory",
+  "prompt_version": "team_v2",
+  "n_prompt_rows": 30323,
+  "n_unique_cached_scores": 21925,
+  "n_new_inference_in_recovery": 0,
+  "previous_inference_seconds_rounded": 1659
+}

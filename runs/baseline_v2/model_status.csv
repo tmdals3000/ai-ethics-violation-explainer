@@ -1,0 +1,2 @@
+model,prompt_version,status,n_prompts,n_new_forward,seconds,per_second,label_tokens,load_plus_run_seconds,detail
+team,team_v2,ok,30323,11229,1659.0,,,,Inference completed before protected-path export failed; seconds rounded from execution log; all scores recovered from cache

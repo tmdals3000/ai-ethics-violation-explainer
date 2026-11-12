@@ -1,6 +1,7 @@
 # Baseline 정리: 텍스트 AI 윤리 규칙 위반 판정 모델을 설명하는 시스템
 
-Project 4 · Baseline v0 (`baseline-v0`, 2026-11-08)
+Project 4 · 현재 개발 기준: Baseline v2 (2026-11-12, `team_v2`)
+변경 내역과 검증 범위: [BASELINE_UPDATE.md](docs/BASELINE_UPDATE.md). 아래 v0·v1·exp-v1 결과 블록은 당시 기록을 보존한다.
 판정이 틀렸을 때 **규칙 찾기 · 규칙 문장 · 판정 모델 · 사람 라벨** 중 어디가 문제인지 밝히고, 고치면 얼마나 나아지는지 확인한다
 
 > 이 문서는 Baseline 을 **연구계획서 형식으로 한 곳에 정리한 것**입니다. 무엇을 문제로 잡았고,
@@ -12,11 +13,11 @@ Project 4 · Baseline v0 (`baseline-v0`, 2026-11-08)
 > | P1 | 규칙 찾기 | [`src/retrieval.py`](src/retrieval.py) | ✅ | [ASSUMPTIONS · τ 결정 기록](docs/ASSUMPTIONS.md#τ-결정-기록) |
 > | P2 | 판정 비교 | [`src/judges.py`](src/judges.py) · [`src/metrics.py`](src/metrics.py) | ✅ 4개 모델 | [BASELINE_REPORT §2](docs/BASELINE_REPORT.md#2-dev-결과) |
 > | P3 | 오류 진단 | [`src/diagnose.py`](src/diagnose.py) | ✅ | [BASELINE_REPORT §2](docs/BASELINE_REPORT.md#p3-원인별-잘못된-판정-base) |
-> | P4 | 수정 효과 | [`src/effects.py`](src/effects.py) | ⏸ 코드만, 4개 모델로 미실행 | [BASELINE_REPORT §6](docs/BASELINE_REPORT.md#6-다음-할-일) |
-> | 화면 | Streamlit | [`app/app.py`](app/app.py) | ✅ 탭 4개 | — |
+> | P4 | 수정 효과 | [`src/effects.py`](src/effects.py) | 실시간 τ·후보 집계·출처별 임계값 비교, 규칙·예시 수정 | [현재 변경 내역](docs/BASELINE_UPDATE.md) |
+> | 화면 | Streamlit | [`app/app.py`](app/app.py) | 트리·행렬·산점도·지도 클릭과 공통 선택 연동 | [현재 변경 내역](docs/BASELINE_UPDATE.md) |
 >
 > ⚠ **모든 수치는 dev 결과입니다. test 는 아직 보지 않았습니다.** 검증 상태: `IS만` — In-Sample: 임계값·τ 를 정한 바로 그 dev 로 평가한 값이라
-> 실제 성능보다 좋게 나올 수 있습니다. 따로 떼어 둔 test 로 확인하면 `OOS 통과`(Out-of-Sample) 로 바뀝니다.
+> 실제 성능보다 좋게 나올 수 있습니다. 따로 떼어 둔 test의 결과는 `OOS 평가`(Out-of-Sample)로 구분합니다.
 > split·유사도·좌표는 조교 파일이 없어 **임시**로 만들었습니다.
 
 ---
@@ -31,11 +32,12 @@ Project 4 · Baseline v0 (`baseline-v0`, 2026-11-08)
 | `src/` | `data` 데이터 준비 · `retrieval` P1 · `judges` 판정 · `metrics` P2 · `diagnose` P3 · `effects` P4 · `adapters` 조교 파일 읽기 · `common` 공통 |
 | `scripts/` | `run.py` 전체 실행기 · `record_run.py` 실험 결과 기록·README 표 생성 · `trial_analysis.py` 시험 실행 분석 |
 | `app/app.py` | Streamlit 화면 4탭. 유해 원문은 기본으로 가리고 눌렀을 때만 보인다 |
-| `results/` | 지표·판정 결과 (**원문 없음**, `text_id` 만). 실험 원장은 `results/experiments.csv` |
+| `results/` | v0·v1·exp-v1의 이전 결과 보존 |
+| `runs/baseline_v2/` | 현재 판정·지표·수정안 (**데이터 원문 없음**, `text_id` 중심). 현재 원장은 이 폴더의 `experiments.csv` |
 | `docs/` | [`ASSUMPTIONS.md`](docs/ASSUMPTIONS.md) 임시 결정 · [`BASELINE_REPORT.md`](docs/BASELINE_REPORT.md) 결과 보고서 · [`EDA.md`](docs/EDA.md) 데이터 탐색 · [`TEAM_SYNC.md`](docs/TEAM_SYNC.md) 팀원 브랜치와 차이 · [`EXP_V1.md`](docs/EXP_V1.md) 개선 실험 exp-v1 |
-| `tests/` | pytest 17개. 가짜 데이터는 `tests/fixtures` 에만 |
+| `tests/` | pytest 26개. 테스트 안에서 만든 작은 데이터와 `tests/fixtures` 사용 |
 
-원본 데이터·가공 데이터·모델 캐시는 저장소 밖(`C:/ml/...`)에 두며 커밋하지 않는다.
+원본·가공 데이터·가중치는 `C:/ml/...`, 판정 캐시는 `data/cache/`에 두며 커밋하지 않는다.
 
 ```bash
 # 1) 환경 (OneDrive 밖에 venv)
@@ -107,7 +109,7 @@ C:/ml/aiethics/.venv/Scripts/streamlit run app/app.py
 | **Jigsaw ACRC** | 2,029행 | 댓글 (`prompt` 모드) | 행마다 붙은 예시 8,116개를 분리 |
 | **ProsocialDialog (PD)** | 165,681행 | 발화 (`prompt` 모드) | 영어만. 안전 라벨 → 위반/정상 변환은 config |
 
-**dev 표본:** DNA dev 전체 2,256건(위반 65), Jigsaw 50건, PD 50건(라벨 비율 유지).
+**현재 dev 표본:** DNA dev 전체 2,256건(위반 65), Jigsaw dev 전체 783건, PD 500건(라벨 비율 유지).
 DNA 는 위반이 드물어 표본을 줄이면 PR-AUC·F1 이 불안정해서 전체를 씁니다.
 
 ### 2.2 규칙 트리
@@ -128,7 +130,7 @@ DNA 는 위반이 드물어 표본을 줄이면 PR-AUC·F1 이 불안정해서 �
 | 기준 판정기 | `meta-llama/Llama-Guard-3-1B` | ✗ (자체 분류 체계) |
 | 기준 판정기 | `Qwen/Qwen3Guard-Gen-0.6B` | ✗ |
 | 기준 판정기 | `google/shieldgemma-2b` | ✓ |
-| **팀 판정기** | ShieldGemma-2B 가중치 + 팀 프롬프트 `team_v1` | ✓ |
+| **팀 판정기** | ShieldGemma-2B 가중치 + 팀 프롬프트 `team_v2` (exp-v1에서 선택) | ✓ |
 
 ### 2.4 조교 파일이 없어 임시로 정한 것
 
@@ -182,8 +184,9 @@ DNA 는 위반이 드물어 표본을 줄이면 PR-AUC·F1 이 불안정해서 �
 
 ### 3.4 P4 수정 효과
 
-임계값(0.3 / 0.7), τ(0.15 / 0.25), 집계(top1) 를 바꿨을 때 뒤집히는 판정을 세고, 규칙 문장
-하나를 고쳐 다시 판정합니다. 화면에서 임계값 슬라이더와 "다시 판정" 으로 직접 해 볼 수 있습니다.
+화면에서 판정 임계값·τ·집계를 바꾸고, 같은 dev 텍스트의 전후 지표와 고쳐진/새 오류를 비교합니다.
+원복은 출처별 원래 임계값을 복원합니다. 규칙 문장·위반/비위반 예시를 편집해 재판정할 수 있으며,
+설정에 정의한 규칙 수정 후보 3건은 각각 독립적으로 평가합니다. 수정 후 임계값은 다시 고르지 않습니다.
 
 ---
 
@@ -191,7 +194,7 @@ DNA 는 위반이 드물어 표본을 줄이면 PR-AUC·F1 이 불안정해서 �
 
 ### 4.1 무엇을 비교했는가
 
-**현재 설정값은 아래 측정으로 정했습니다.** 원본 수치는 `results/` 에 있습니다.
+아래는 **초기 baseline-v0의 설정 결정 기록**입니다. 현재 T2·κ 기준과 규칙 수정 실험은 [v2 변경 기록](docs/BASELINE_UPDATE.md)을 따릅니다. 원본 수치는 `results/`에 있습니다.
 
 | 비교한 것 | 결론 | 근거 |
 |---|---|---|
@@ -222,7 +225,7 @@ DNA 는 위반이 드물어 표본을 줄이면 PR-AUC·F1 이 불안정해서 �
 
 ### 5.1 기록 규칙
 
-- 원자료는 `results/experiments.csv` 하나다. 컬럼: `version, run_id, date, commit, split, table, source, model, metric, value, note`.
+- 현재 원자료는 `runs/baseline_v2/experiments.csv`다(`paths.results_dir` 기준). 이전 `results/` 원장은 보존한다. 컬럼: `version, run_id, date, commit, split, table, source, model, metric, value, note`.
 - 새 실험은 **행을 추가만** 한다. 이전 결과는 지우거나 고치지 않는다.
   - `version`: 결과 묶음 이름 (예: `baseline-v0`, `baseline-v1`). 같은 version 은 다시 기록할 수 없다.
   - `run_id`: 판정기 하나의 설정 — 기준 모델 `B-LG`(Llama Guard) · `B-QG`(Qwen3Guard) · `B-SG`(ShieldGemma), 팀 판정기 `T1`, `T2`… (프롬프트·임계값이 바뀌면 새 번호), 규칙 찾기 `R1`, `R2`…, 모델 쌍 κ 는 `B-LG×B-QG` 형식.
@@ -231,7 +234,7 @@ DNA 는 위반이 드물어 표본을 줄이면 PR-AUC·F1 이 불안정해서 �
 - README 표는 손으로 고치지 않는다. 위 명령이 `experiments.csv` 에서 만든다. 새 version 은 아래 자리표시 바로 밑(맨 위)에 쌓인다.
 - 수치는 dev 결과만 적는다. test 결과는 `split=test` 행으로 따로 기록하고 표 제목에 `test` 를 쓴다.
 
-### 5.2 알려진 문제
+### 5.2 이전 baseline-v0·v1에서 확인한 문제
 
 검증 상태 `IS만` = In-Sample. 임계값·τ 를 고른 dev 와 평가한 dev 가 같아서 낙관적인 값이다. test(Out-of-Sample) 로 확인하기 전까지 최종 성능으로 쓰지 않는다.
 
@@ -657,12 +660,11 @@ DNA 는 위반이 드물어 표본을 줄이면 PR-AUC·F1 이 불안정해서 �
 | **결과** | P1 검색 결과·τ 비교, 4개 모델 판정표, P2 지표·κ, P3 원인표 (`results/`, 원문 없음) |
 | **화면** | Streamlit 4탭 — 규칙 찾기 · 판정 비교 · 오류 진단 · 수정 효과 |
 | **문서** | [ASSUMPTIONS](docs/ASSUMPTIONS.md) 임시 결정 · [BASELINE_REPORT](docs/BASELINE_REPORT.md) 보고서와 멘토링 질문 7개 |
-| **테스트** | pytest 17개 |
+| **테스트** | pytest 26개 |
 
 **다음 할 일**
 
-1. 팀 프롬프트 v2·v3 를 dev 에서 비교 (`T2`, `T3`) — DNA 거절문 문제
-2. P4 를 4개 모델 결과로 실행
-3. Jigsaw dev 전체(783건) + PD dev 500건 판정 (약 20–35분 추정)
-4. 조교 파일이 오면 어댑터로 교체 후 재실행
-5. 최종 프롬프트·임계값 고정 뒤 test 1회 평가
+1. 규칙 수정 후보의 dev 효과·새 오류를 검토하고 최종 개선안을 확정
+2. 규칙 트리 분리 여부·조교 라벨 기준 등 임시 결정을 확정
+3. 조교 파일이 오면 어댑터로 교체 후 재실행
+4. 최종 프롬프트·임계값·개선안을 고정한 뒤 test에서 출처별 1회 평가

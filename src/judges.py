@@ -343,7 +343,8 @@ def work_items(cfg, tgt, nodes, per, ex):
 
 def aggregate(df, how):
     """base·rule_excluded 의 후보별 확률 → 텍스트별 하나. max: 최댓값, top1: 유사도 1위 후보."""
-    multi = df[df.condition.isin(["base", "rule_excluded"]) & (df.candidate_rule_id != "")]
+    multi = df[df.condition.isin(["base", "rule_excluded"]) & (df.candidate_rule_id != "")
+               & ~df.candidate_rule_id.astype(str).str.startswith("AGG:")]
     if multi.empty:
         return df.iloc[:0]
     keys = ["text_id", "model", "condition", "prompt_version"]
@@ -379,26 +380,38 @@ def choose_thresholds(cfg, j, texts, metric=None):
     return {"metric": metric, "per_source": per, "common": (float(mean.idxmax()), round(float(mean.max()), 4))}
 
 
-def score_team(cfg, items, prompt_version, rules_override=None):
-    """팀 판정기로 items 를 판정 (P4 재판정용). 캐시에 없을 때만 ShieldGemma 를 올린다."""
-    hf = cfg["judge"]["models"]["team"]["hf_id"]
-    key = f"{hf}|team|{prompt_version}"
-    cache = Cache(cfg["_data"] / "cache/judgments.sqlite")
+def judgment_cache(cfg):
+    return Cache(cfg.get("_cache", cfg["_data"] / "cache") / "judgments.sqlite")
 
-    class _Builder(TeamJudge):  # 모델 없이 프롬프트만 만든다
-        def __init__(self):
-            self.prompt_version = prompt_version
-    prompts = [_Builder().build(it) for it in items]
+
+def score_rule_model(cfg, items, model="team", prompt_version=None):
+    """규칙 판정 모델의 P4 재판정. 동일 프롬프트는 캐시를 재사용한다."""
+    if model not in ("team", "shieldgemma"):
+        raise ValueError("규칙 문장을 받는 모델만 재판정할 수 있습니다.")
+    if not items:
+        return np.array([])
+    pv = (prompt_version or cfg["judge"]["team_prompt_versions"][-1]) if model == "team" else "official"
+    hf = cfg["judge"]["models"][model]["hf_id"]
+    key = f"{hf}|{model}|{pv}"
+    cache = judgment_cache(cfg)
+    builder = TeamJudge.__new__(TeamJudge) if model == "team" else ShieldGemma.__new__(ShieldGemma)
+    builder.prompt_version = pv
+    prompts = [builder.build(it) for it in items]
     keys = [Cache.key(key, p) for p in prompts]
     have = cache.get_many(list(set(keys)))
     if len(have) < len(set(keys)):
         sg = ShieldGemma(cfg, hf)
         try:
-            p, _ = score_cached(TeamJudge(cfg, hf, prompt_version, shared=sg), cache, key, prompts)
+            jd = TeamJudge(cfg, hf, pv, shared=sg) if model == "team" else sg
+            p, _ = score_cached(jd, cache, key, prompts)
         finally:
             sg.close()
         return p
     return np.array([have[k] for k in keys])
+
+
+def score_team(cfg, items, prompt_version, rules_override=None):
+    return score_rule_model(cfg, items, "team", prompt_version)
 
 
 def load_judge(cfg, name, shared):
@@ -415,7 +428,7 @@ def run(cfg, only=None, trial=None):
         tgt = data.dev_sample(tgt, int(trial), cfg["data"]["stratify_sample"], cfg["seed"])
     per = pd.read_csv(cfg["_res"] / "p1/retrieval_per_text.csv", keep_default_na=False)
     rule_items, free_items = work_items(cfg, tgt, nodes, per, ex)
-    cache = Cache(cfg["_data"] / "cache/judgments.sqlite")
+    cache = judgment_cache(cfg)
     ta, _ = adapters.read(cfg, "judgments") if adapters.has_ta(cfg, "judgments") else (None, True)
     ta_models = set(ta.model) if ta is not None else set()
     rows, status = [], []
@@ -468,7 +481,11 @@ def run(cfg, only=None, trial=None):
         trial_report(cfg, rows, status, texts)
         return
     finalize(cfg, rows, ta, texts)
-    pd.DataFrame(status).to_csv(cfg["_res"] / "model_status.csv", index=False)
+    status_path = cfg["_res"] / "model_status.csv"
+    old_status = read_csv_safe(status_path)
+    if len(old_status):
+        old_status = old_status[~old_status.model.isin(names)]
+    pd.concat([old_status, pd.DataFrame(status)], ignore_index=True).to_csv(status_path, index=False)
     print(pd.DataFrame(status).to_string())
 
 

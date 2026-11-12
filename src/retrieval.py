@@ -146,7 +146,7 @@ def summarize(per):
         gx = g[g.source == src]
         if len(gx):
             row |= {"top1_acc": round(gx["hit1"].mean(), 4), "top3_acc": round(gx["hit3"].mean(), 4)}
-            if gx["hit1_mid"].notna().any():
+            if "hit1_mid" in gx and gx["hit1_mid"].notna().any():
                 row |= {"top1_acc_mid": round(gx["hit1_mid"].astype(float).mean(), 4),
                         "top3_acc_mid": round(gx["hit3_mid"].astype(float).mean(), 4)}
             row["first_divergence"] = gx["first_divergence"].value_counts().to_dict()

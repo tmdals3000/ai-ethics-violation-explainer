@@ -41,7 +41,8 @@ def times_from_files(cfg):
             out.append((f"step:{r.step}", r.step, "단계 전체 (마지막 실행)", None, float(r.seconds), f"timings.csv {r.timestamp}; {r.dev_sample_per_source}"))
     st = read_csv_safe(res / "model_status.csv")
     for r in st[st.status == "ok"].itertuples() if len(st) else []:
-        out.append((RUN_ID.get(r.model, r.model), r.model, "판정 (캐시에 없던 것만 새로 계산)", int(r.n_new_forward), float(r.seconds),
+        rid = "T" + str(r.prompt_version).rsplit("v", 1)[-1] if r.model == "team" else RUN_ID.get(r.model, r.model)
+        out.append((rid, r.model, "판정 (캐시에 없던 것만 새로 계산)", int(r.n_new_forward), float(r.seconds),
                     f"model_status.csv; 전체 프롬프트 {int(r.n_prompts):,}"))
     return out
 
@@ -49,7 +50,11 @@ def times_from_files(cfg):
 def build_rows(cfg, version, date, commit):
     res, rows = cfg["_res"], []
     # 임계값 기준이 바뀌면 run_id 도 바꾼다 (exp-v1: 팀 판정기 κ 기준 → T1-κ)
-    RID = RUN_ID | ({"team": "T1-κ"} if version.startswith("exp") else {})
+    pv = cfg["judge"]["team_prompt_versions"][-1]
+    team_rid = "T" + pv.rsplit("v", 1)[-1]
+    if cfg["judge"].get("team_threshold_metric", "f1") == "kappa":
+        team_rid += "-κ"
+    RID = RUN_ID | {"team": team_rid}
 
     def add(run_id, table, source, model, metric, value, note=""):
         rows.append([version, run_id, date, commit, "dev", table, source, model, metric, value, note])
@@ -60,9 +65,9 @@ def build_rows(cfg, version, date, commit):
     for mo, rid in RID.items():
         spec = cfg["judge"]["models"][mo]
         add(rid, "setup", "", mo, "hf_id", spec["hf_id"])
-        add(rid, "setup", "", mo, "prompt_version", "team_v1" if mo == "team" else "official")
+        add(rid, "setup", "", mo, "prompt_version", pv if mo == "team" else "official")
         if mo == "team" and len(th):
-            t = th[th.prompt_version == "team_v1"]
+            t = th[th.prompt_version == pv]
             add(rid, "setup", "", mo, "threshold", " / ".join(f"{SRC[s]} {v:g}" for s, v in zip(t.source, t.per_source_threshold)))
             crit = t.criterion.iloc[0] if "criterion" in t and len(t) else "f1"
             add(rid, "setup", "", mo, "threshold_rule", f"출처별 dev {'κ(사람 라벨)' if crit == 'kappa' else 'F1(위반)'} 최대, 격자 0.01")
@@ -103,7 +108,21 @@ def build_rows(cfg, version, date, commit):
     import json
     for f in sorted((res / "rule_proposals").glob("*.json")):
         pr = json.loads(f.read_text(encoding="utf-8"))
+        if pv != "team_v1" and pr.get("prompt_version") != pv:
+            continue
         kind = pr.get("name", "").split("_")[0]
+        if kind == "rule" and "metrics_before" in pr:
+            mo = pr["change"]["model"]
+            note = f"{pr['change']['node_id']} ({f.stem})"
+            for src, before in pr["metrics_before"].items():
+                after = pr["metrics_after"][src]
+                for k in ["n", "roc_auc", "pr_auc", "f1", "kappa_human"]:
+                    add(RID[mo], "p4_rule_edit", src, mo, f"before_{k}", before[k], note)
+                    add(RID[mo], "p4_rule_edit", src, mo, f"after_{k}", after[k], note)
+            scope_source = next(iter(pr["metrics_before"])) if len(pr["metrics_before"]) == 1 else ""
+            for k in ["n_flipped", "n_fixed", "n_broken"]:
+                add(RID[mo], "p4_rule_edit", scope_source, mo, k, pr[k], note)
+            continue
         if kind not in ("threshold", "priority", "tau"):
             continue  # 규칙 개선안(proposal_*) 은 실험 version 에서 따로 기록
         mo = pr["change"]["model"]
@@ -152,7 +171,7 @@ def exp_rows(d, res, add):
 
 def record(cfg, a):
     p = cfg["_res"] / "experiments.csv"
-    old = read_csv_safe(p)
+    old = read_csv_safe(p, keep_default_na=False)
     if len(old) and (old.version == a.version).any():
         raise SystemExit(f"{a.version} 은 이미 기록되어 있습니다. 이전 결과는 지우지 않으므로 새 version 을 쓰세요.")
     new = build_rows(cfg, a.version, a.date, a.commit)
@@ -240,18 +259,23 @@ def readme_block(cfg, version):
     if len(p4f):
         p4 += "**P4 설정 변경 시 뒤집힌 판정** (dev 전체 출처 합계, 맞게 = fixed, 틀리게 = broken)\n\n" + table(
             p4f, ["run_id", "변경"], "metric", ["n_flipped", "n_fixed", "n_broken"]) + "\n\n"
+    edits = e[e.table == "p4_rule_edit"].assign(규칙=lambda x: x.note)
+    if len(edits):
+        p4 += "**P4 규칙 문장 수정 후보** (dev, 출처별 임계값 고정, test 미확인)\n\n" + table(
+            edits, ["출처", "run_id", "규칙"], "metric", ["before_n", "before_roc_auc", "after_roc_auc", "before_f1", "after_f1", "n_fixed", "n_broken"]) + "\n\n"
     ex = exp_block(e) if version.startswith("exp") else ""
     tm = e[e.table == "time"]
     tml = ["| run_id | 작업 | 시간 | 비고 |", "|---|---|---|---|"]
     for r in tm.itertuples():
         sec = float(r.value)
         tml.append(f"| {r.run_id} | {r.model} | {sec / 60:.1f}분 ({sec:,.0f}초) | {r.note} |")
+    result_path = cfg["_res"].relative_to(ROOT).as_posix()
     return f"""<!-- results:{version} -->
 ### {version.replace('baseline-v', 'Baseline v')} (dev, {date})
 
 > ⚠ **모든 수치는 dev 결과다. test 는 아직 보지 않았다.** 검증 상태: `IS만` (In-Sample: 임계값·τ 를 정한 dev 로 평가해 낙관적).
 > 표본(dev): {sample}. split·규칙 트리는 임시([ASSUMPTIONS](docs/ASSUMPTIONS.md)).
-> 원자료: `results/experiments.csv` (version = `{version}`). 이 표는 `python scripts/record_run.py readme --version {version}` 로 만든다.
+> 원자료: `{result_path}/experiments.csv` (version = `{version}`). 이 표는 `python scripts/record_run.py readme --version {version}` 로 만든다.
 
 **실험 설정**
 

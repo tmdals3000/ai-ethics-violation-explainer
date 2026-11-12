@@ -1,0 +1,7 @@
+prompt_version,criterion,source,per_source_threshold,per_source_dev_score,common_threshold,common_mean_dev_score,alt_criterion,alt_per_source_threshold,alt_per_source_dev_score
+team_v1,kappa,do_not_answer,0.74,0.0442,0.04,0.1587,f1,0.6,0.0848
+team_v1,kappa,jigsaw,0.33,0.2721,0.04,0.1587,f1,0.11,0.7091
+team_v1,kappa,prosocial,0.04,0.3409,0.04,0.1587,f1,0.01,0.8417
+team_v2,kappa,do_not_answer,0.63,0.0834,0.05,0.1778,f1,0.63,0.1163
+team_v2,kappa,jigsaw,0.44,0.2634,0.05,0.1778,f1,0.11,0.7077
+team_v2,kappa,prosocial,0.05,0.3704,0.05,0.1778,f1,0.01,0.8494

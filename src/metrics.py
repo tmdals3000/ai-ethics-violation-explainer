@@ -45,6 +45,8 @@ def load_joined(cfg, team_version=None):
     j, is_tmp = adapters.read(cfg, "judgments")
     texts, nodes, _, _ = data.load(cfg)
     j = main_rows(j)
+    j = j[~j.candidate_rule_id.astype(str).str.startswith("AGG:")
+          | (j.candidate_rule_id == f"AGG:{cfg['judge']['aggregation']}")]
     pv = team_version or cfg["judge"]["team_prompt_versions"][-1]
     j = j[(j.model != "team") | (j.prompt_version == pv)]
     parent = dict(zip(nodes.node_id, nodes.parent_id))
@@ -59,6 +61,24 @@ def load_joined(cfg, team_version=None):
     return m, is_tmp
 
 
+def pairwise_kappa(m):
+    """화면/파일 모두 전달받은 같은 필터 범위에서 모델 쌍 κ 를 계산한다."""
+    from sklearn.metrics import cohen_kappa_score
+    cols = ["split", "source", "model_a", "model_b", "n", "kappa", "note"]
+    if m.empty:
+        return pd.DataFrame(columns=cols)
+    base = m[m.condition == "base"].pivot_table(index=["split", "source", "text_id"], columns="model", values="prediction")
+    rows = []
+    for (sp, src), g in base.groupby(level=[0, 1]):
+        for a, b in combinations([x for x in MODELS if x in g.columns], 2):
+            gg = g[[a, b]].dropna()
+            k = cohen_kappa_score(gg[a], gg[b]) if len(gg) and (gg[a].nunique() > 1 or gg[b].nunique() > 1) else np.nan
+            rows.append(dict(split=sp, source=src, model_a=a, model_b=b, n=len(gg),
+                             kappa=round(k, 4) if pd.notna(k) else np.nan,
+                             note="" if pd.notna(k) else "두 모델이 모두 한 값만 예측해 κ 계산 불가"))
+    return pd.DataFrame(rows, columns=cols)
+
+
 def run(cfg):
     m, _ = load_joined(cfg)
     out = cfg["_res"] / "p2"
@@ -70,18 +90,9 @@ def run(cfg):
     met.loc[met.source != "do_not_answer", "pr_auc_note"] = "PR-AUC 는 DNA 중심 지표 (참고값)"
     met.to_csv(out / "metrics_by_source.csv", index=False)
     # 2) 모델 쌍 κ (base 조건, 같은 텍스트끼리)
-    from sklearn.metrics import cohen_kappa_score
     base = m[m.condition == "base"].pivot_table(index=["split", "source", "text_id"], columns="model", values="prediction")
-    kap = []
-    for (sp, s), g in base.groupby(level=[0, 1]):
-        for a, b in combinations([x for x in MODELS if x in g.columns], 2):
-            gg = g[[a, b]].dropna()
-            k = cohen_kappa_score(gg[a], gg[b]) if len(gg) and (gg[a].nunique() > 1 or gg[b].nunique() > 1) else np.nan
-            kap.append({"split": sp, "source": s, "model_a": a, "model_b": b, "n": len(gg),
-                        "kappa": round(k, 4) if k == k else np.nan,
-                        "note": "" if k == k else "두 모델이 모두 한 값만 예측해 κ 계산 불가"})
     missing = [x for x in MODELS if x not in base.columns]
-    kap = pd.DataFrame(kap)
+    kap = pairwise_kappa(m)
     kap.attrs["missing"] = missing
     kap.to_csv(out / "pairwise_kappa.csv", index=False)
     # 3) 묶음별 잘못된 판정 비율 (base 조건)

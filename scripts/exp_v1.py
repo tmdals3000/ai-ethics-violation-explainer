@@ -101,7 +101,7 @@ def harm_recall(cfg, ids, y, p, th_by_src, rid, extra):
 
 def score(cfg, sg, model_key_name, jd, items):
     hf = cfg["judge"]["models"]["team"]["hf_id"]
-    cache = judges.Cache(cfg["_data"] / "cache/judgments.sqlite")
+    cache = judges.judgment_cache(cfg)
     t = time.time()
     p, n_new = judges.score_cached(jd, cache, f"{hf}|{model_key_name}", [jd.build(it) for it in items])
     return p, n_new, time.time() - t
