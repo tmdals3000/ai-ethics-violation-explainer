@@ -1,0 +1,912 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>윤리 규칙 판정 설명</title>
+<style>
+:root{
+  color-scheme: light;
+  --paper:#EEF1F4; --surface:#FFFFFF; --sunk:#F4F6F8; --ink:#18202B; --muted:#5E6875; --line:#D5DBE1;
+  --accent:#0B7285; --accent-soft:rgba(11,114,133,.12); --viol:#B4233C; --safe:#7D8896; --ok:#2F855A;
+  --c1:#4C51BF; --c2:#B7791F; --c3:#0B7285; --c4:#B4233C;
+  --m1:#6B46C1; --m2:#B7791F; --m3:#2B6CB0; --m4:#C05621;
+  --warn-bg:#FFF4E5; --warn-ink:#7A4A00;
+  --heat:180,35,60; --cool:11,114,133;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --paper:#11151B; --surface:#1A2029; --sunk:#151A21; --ink:#E6EAF0; --muted:#9AA5B3; --line:#2C3542;
+    --accent:#3BC0D4; --accent-soft:rgba(59,192,212,.16); --viol:#F2668B; --safe:#7D8896; --ok:#5CC99A;
+    --c1:#8D92F5; --c2:#E3B04B; --c3:#3BC0D4; --c4:#F2668B;
+    --m1:#B794F4; --m2:#E3B04B; --m3:#63B3ED; --m4:#F6AD55;
+    --warn-bg:#2B2213; --warn-ink:#F3C77A;
+    --heat:242,102,139; --cool:59,192,212;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --paper:#11151B; --surface:#1A2029; --sunk:#151A21; --ink:#E6EAF0; --muted:#9AA5B3; --line:#2C3542;
+  --accent:#3BC0D4; --accent-soft:rgba(59,192,212,.16); --viol:#F2668B; --safe:#7D8896; --ok:#5CC99A;
+  --c1:#8D92F5; --c2:#E3B04B; --c3:#3BC0D4; --c4:#F2668B;
+  --m1:#B794F4; --m2:#E3B04B; --m3:#63B3ED; --m4:#F6AD55;
+  --warn-bg:#2B2213; --warn-ink:#F3C77A;
+  --heat:242,102,139; --cool:59,192,212;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:14px/1.5 system-ui,-apple-system,"Segoe UI","Malgun Gothic",sans-serif}
+header{background:var(--surface);border-bottom:1px solid var(--line);padding:14px 20px 0}
+h1{font-size:18px;margin:0 0 2px}
+.sub{color:var(--muted);font-size:12.5px;margin:0 0 10px}
+.filters{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;padding:8px 0 10px;border-top:1px solid var(--line)}
+.filters label{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:5px}
+select,input[type=number],input[type=text],textarea{font:inherit;font-size:13px;color:var(--ink);background:var(--sunk);border:1px solid var(--line);border-radius:6px;padding:4px 6px}
+textarea{width:100%;min-height:70px}
+button{font:inherit;font-size:13px;border:1px solid var(--line);background:var(--sunk);color:var(--ink);border-radius:6px;padding:4px 10px;cursor:pointer}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button:disabled{opacity:.5;cursor:default}
+.tabs{display:flex;gap:2px;overflow-x:auto}
+.tab{border:0;border-bottom:3px solid transparent;background:none;border-radius:0;padding:8px 14px;color:var(--muted);white-space:nowrap}
+.tab.on{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;padding:16px 20px;align-items:start}
+@media (max-width:1100px){.layout{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:600px){.layout{padding:12px 16px}header{padding:12px 16px 0}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px;min-width:0}
+.card h2{font-size:14px;margin:0 0 8px}
+.card h3{font-size:13px;margin:12px 0 6px}
+.q{color:var(--muted);font-size:12.5px;margin:-4px 0 10px}
+.row{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start}
+.grow{flex:1 1 320px;min-width:0}
+.kpis{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px}
+.kpi{background:var(--sunk);border-radius:8px;padding:8px 12px;min-width:110px}
+.kpi b{display:block;font-size:20px;font-variant-numeric:tabular-nums}
+.kpi span{font-size:11.5px;color:var(--muted)}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th,td{padding:4px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{color:var(--muted);font-weight:600;font-size:11.5px}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+tr.sel td{background:var(--accent-soft)}
+tr.click{cursor:pointer}
+tr.click:hover td{background:var(--sunk)}
+.scroll{max-height:320px;overflow:auto}
+.hint{font-size:12px;color:var(--muted)}
+.warn{background:var(--warn-bg);color:var(--warn-ink);border-radius:6px;padding:6px 10px;font-size:12.5px;margin:6px 0}
+.chip{display:inline-block;font-size:11px;border-radius:10px;padding:1px 7px;background:var(--sunk);border:1px solid var(--line)}
+.chip.v{background:rgba(var(--heat),.12);color:var(--viol);border-color:transparent}
+.chip.s{color:var(--muted)}
+.chip.ok{color:var(--ok)}
+.chip.bad{color:var(--viol)}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:4px;vertical-align:middle}
+svg text{font-family:inherit}
+.blur{filter:blur(5px);cursor:pointer;user-select:none}
+.textbox{white-space:pre-wrap;background:var(--sunk);border-radius:6px;padding:8px;font-size:12.5px;max-height:240px;overflow:auto;margin:4px 0 8px}
+.side{position:sticky;top:10px}
+@media (max-width:1100px){.side{position:static}}
+.legend{display:flex;flex-wrap:wrap;gap:10px;font-size:12px;color:var(--muted);margin:4px 0}
+.bar{cursor:pointer}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;padding:16px;z-index:10}
+.modal.on{display:flex}
+.modal .card{max-width:760px;width:100%;max-height:90vh;overflow:auto;margin:0}
+.steps li{margin:2px 0}
+.steps li.hit{font-weight:600}
+.status{font-size:12px}
+.mono{font-family:ui-monospace,Consolas,monospace;font-size:12px}
+.slider{display:flex;align-items:center;gap:8px;font-size:12.5px}
+.slider input[type=range]{width:180px}
+</style>
+</head>
+<body>
+<header>
+  <h1>AI 윤리 규칙 위반 판정 설명</h1>
+  <p class="sub">규칙 찾기 · 판정 비교 · 잘못된 판정 진단 · 수정 효과 확인 <span id="built"></span></p>
+  <div class="filters" id="filters">
+    <label>출처 <select id="fSrc"><option value="all">전체</option><option value="dna">Do-Not-Answer</option><option value="jigsaw">Jigsaw</option><option value="prosocial">ProsocialDialog</option></select></label>
+    <label>분할 <select id="fSplit"><option value="dev">dev</option></select></label>
+    <label id="testWrap" hidden><input type="checkbox" id="fTest"> test 열기</label>
+    <label>규칙 <select id="fRule"><option value="all">전체</option></select></label>
+    <label>판정 모델 <select id="fModel"></select></label>
+    <label>판정 결과 <select id="fResult"><option value="all">전체</option><option value="ok">맞음</option><option value="bad">틀림</option></select></label>
+    <label>판정 조건 <select id="fCond"></select></label>
+    <label>팀 판정기 <select id="fTeam"></select></label>
+    <label>임계값 기준 <select id="fThr"><option value="kappa">dev κ 최대</option><option value="f1">dev F1 최대</option></select></label>
+    <span class="status" id="srv"></span>
+  </div>
+  <nav class="tabs" id="tabs">
+    <button class="tab" data-t="p1">P1 규칙 찾기</button>
+    <button class="tab" data-t="p2">P2 판정 비교</button>
+    <button class="tab" data-t="p3">P3 잘못된 판정 진단</button>
+    <button class="tab" data-t="p4">P4 수정 효과 확인</button>
+  </nav>
+</header>
+<div class="layout">
+  <main id="main"></main>
+  <aside class="side"><div class="card" id="detail"></div></aside>
+</div>
+<div class="modal" id="modal"><div class="card" id="modalBody"></div></div>
+
+<script id="data" type="application/json">/*__DATA__*/{}</script>
+<script>
+"use strict";
+// ======================================================================= 데이터
+const D = JSON.parse(document.getElementById('data').textContent);
+const TX = D.texts, N = TX.id.length;
+const IDX = new Map(TX.id.map((t, i) => [t, i]));
+const NODE = new Map(D.nodes.map(n => [n.id, n]));
+const MODELS = ['llamaguard', 'qwen3guard', 'shieldgemma', 'team'];
+const MNAME = {llamaguard: 'Llama Guard 3', qwen3guard: 'Qwen3Guard', shieldgemma: 'ShieldGemma', team: '팀 판정기'};
+const MCOL = {llamaguard: 'var(--m1)', qwen3guard: 'var(--m2)', shieldgemma: 'var(--m3)', team: 'var(--m4)'};
+const RULE_FREE = new Set(['llamaguard', 'qwen3guard']);
+const CONDS = ['base', 'excluded', 'rule_only', 'rule_example'];
+const CNAME = {base: '기본', excluded: '규칙 제외', rule_only: '규칙 문장만', rule_example: '규칙 문장 + 예시', none: '(규칙 없음)'};
+const CAUSES = {1: '규칙 찾기 문제', 2: '라벨 확인 필요', 3: '규칙 문장 문제', 4: '판정 모델 문제'};
+const CCOL = {1: 'var(--c1)', 2: 'var(--c2)', 3: 'var(--c3)', 4: 'var(--c4)'};
+const SRCNAME = {dna: 'Do-Not-Answer', jigsaw: 'Jigsaw', prosocial: 'ProsocialDialog'};
+const TOP = D.meta.top || 5, DELTA = 0.02, MIN_N = 5;
+const API = location.protocol.startsWith('http') ? '' : 'http://127.0.0.1:8765';
+
+const TREE = {};
+for (const src of ['dna', 'jigsaw']) {
+  const ns = D.nodes.filter(n => n.src === src);
+  if (!ns.length) continue;
+  const t = {src, ids: ns.map(n => n.id), level: {}, parent: {}, children: {}, maxLv: 0};
+  ns.forEach(n => { t.level[n.id] = n.lv; t.parent[n.id] = n.par; t.children[n.id] = []; t.maxLv = Math.max(t.maxLv, n.lv); });
+  ns.forEach(n => { if (n.par) t.children[n.par].push(n.id); });
+  t.leaves = ns.filter(n => !t.children[n.id].length).map(n => n.id);
+  t.atLevel = lv => { lv = Math.min(lv, t.maxLv); return t.ids.filter(id => t.level[id] === lv); };
+  t.path = id => { const o = []; while (id) { o.push(id); id = t.parent[id]; } return o.reverse(); };
+  t.unitOf = leaf => { const p = t.path(leaf); return p.length > 1 ? p[1] : p[0]; };
+  t.leavesUnder = id => t.children[id].length ? t.children[id].flatMap(c => t.leavesUnder(c)) : [id];
+  t.units = t.ids.filter(id => t.level[id] === Math.min(2, t.maxLv));
+  const S = D.sims[src];
+  if (S) {
+    t.col = Object.fromEntries(S.cols.map((c, j) => [c, j])); t.nc = S.cols.length;
+    const bin = atob(S.b64), u8 = new Uint8Array(bin.length); for (let k = 0; k < bin.length; k++) u8[k] = bin.charCodeAt(k);
+    t.vals = new Float32Array(u8.buffer); t.rowOf = new Map(S.rows.map((r, k) => [r, k]));
+  }
+  TREE[src] = t;
+}
+
+// ======================================================================= 계산 (analysis.py와 같은 정의)
+function simOf(i, edit) {                       // i번 텍스트의 노드 → 유사도 함수. edit = 규칙 문장 수정안
+  const src = TX.src[i], t = TREE[src];
+  if (!t || !t.rowOf) return null;
+  const k = t.rowOf.get(i);
+  if (k === undefined) return null;
+  const off = k * t.nc;
+  if (edit && edit.src === src && edit.sims.has(i)) {
+    const node = edit.rule, v = edit.sims.get(i);
+    return n => n === node ? v : t.vals[off + t.col[n]];
+  }
+  return n => t.vals[off + t.col[n]];
+}
+function bfs(src, sim, tau, start = 2, exclude = null, boost = null) {
+  const t = TREE[src], ex = exclude || new Set();
+  let add = null;
+  if (boost && boost.node && boost.v) {
+    add = new Map(); const st = [boost.node];
+    while (st.length) { const n = st.pop(); add.set(n, boost.v); st.push(...t.children[n]); }
+  }
+  const sc = add ? (n => sim(n) + (add.get(n) || 0)) : sim;
+  let frontier = t.atLevel(start).filter(n => !ex.has(n));
+  const leaves = [], kept = {}, compared = new Set(); let ncmp = 0, fb = false;
+  while (frontier.length) {
+    ncmp += frontier.length; frontier.forEach(n => compared.add(n));
+    let keep = frontier.filter(n => sc(n) >= tau);
+    if (!keep.length) { keep = [frontier.reduce((a, b) => sc(b) > sc(a) ? b : a)]; fb = true; }
+    kept[t.level[keep[0]]] = new Set(keep);
+    const nxt = [];
+    for (const n of keep) {
+      const kids = t.children[n].filter(c => !ex.has(c));
+      if (kids.length) nxt.push(...kids); else if (!t.children[n].length) leaves.push(n);
+    }
+    frontier = nxt;
+  }
+  leaves.sort((a, b) => sc(b) - sc(a));
+  return {leaves, ncmp, kept, compared, fb, sc};
+}
+function searchOne(i, tau, start, opts = {}) {     // rule_search.py의 한 행
+  const src = TX.src[i], t = TREE[src], sim = simOf(i, opts.edit);
+  if (!sim) return null;
+  const r = bfs(src, sim, tau, start, opts.exclude, opts.boost);
+  const gold = TX.gold[i], gp = gold ? t.path(gold) : [];
+  const top1 = r.leaves[0], fp = top1 ? t.path(top1) : [];
+  let div = '일치';
+  for (let l = 0; l < gp.length; l++) if (fp[l] !== gp[l]) { div = 'L' + (l + 1); break; }
+  let lost = '남음';
+  for (let l = 0; l < gp.length; l++) if (r.kept[l + 1] && !r.kept[l + 1].has(gp[l])) { lost = 'L' + (l + 1); break; }
+  const branches = [];
+  for (const leaf of r.leaves) { const p = t.path(leaf), b = p.length > 2 ? p[1] : leaf; if (!branches.includes(b)) branches.push(b); }
+  const gb = gp.length > 2 ? gp[1] : gold;
+  const rank = r.leaves.indexOf(gold) + 1;
+  return {...r, top1, gold, goldRank: rank || null, ok1: top1 === gold, ok3: rank > 0 && rank <= 3,
+          l2rank: branches.indexOf(gb) + 1 || null, div, lost, eff: r.ncmp / t.ids.length};
+}
+function auc(p, y) {
+  const n = p.length; let P = 0; for (const v of y) P += v; const Q = n - P;
+  if (!P || !Q) return NaN;
+  const o = [...p.keys()].sort((a, b) => p[a] - p[b]); let sumR = 0;
+  for (let i = 0; i < n;) { let j = i; while (j + 1 < n && p[o[j + 1]] === p[o[i]]) j++; const avg = (i + j) / 2 + 1;
+    for (let k = i; k <= j; k++) if (y[o[k]]) sumR += avg; i = j + 1; }
+  return (sumR - P * (P + 1) / 2) / (P * Q);
+}
+function avgPrec(p, y) {
+  let P = 0; for (const v of y) P += v; if (!P) return NaN;
+  const o = [...p.keys()].sort((a, b) => p[b] - p[a]); let tp = 0, fp = 0, prevR = 0, s = 0;
+  for (let i = 0; i < o.length;) { let j = i; while (j + 1 < o.length && p[o[j + 1]] === p[o[i]]) j++;
+    for (let k = i; k <= j; k++) y[o[k]] ? tp++ : fp++; const R = tp / P; s += (R - prevR) * tp / (tp + fp); prevR = R; i = j + 1; }
+  return s;
+}
+function kappa2(a, b) {                          // 두 이진 판정의 Cohen's κ
+  const n = a.length; if (!n) return NaN; let po = 0, pa = 0, pb = 0;
+  for (let i = 0; i < n; i++) { po += a[i] === b[i]; pa += a[i]; pb += b[i]; }
+  po /= n; pa /= n; pb /= n; const pe = pa * pb + (1 - pa) * (1 - pb);
+  return pe >= 1 ? NaN : (po - pe) / (1 - pe);
+}
+function metrics(p, y, thr) {
+  const pred = p.map(v => v >= thr ? 1 : 0); let tp = 0, fp = 0, fn = 0;
+  for (let i = 0; i < p.length; i++) { if (pred[i] && y[i]) tp++; else if (pred[i]) fp++; else if (y[i]) fn++; }
+  const both = y.some(v => v) && y.some(v => !v);
+  return {n: p.length, pos: y.reduce((a, b) => a + b, 0), auc: auc(p, y), ap: avgPrec(p, y), thr,
+          f1: tp ? 2 * tp / (2 * tp + fp + fn) : 0, prec: tp + fp ? tp / (tp + fp) : 0, rec: tp + fn ? tp / (tp + fn) : 0,
+          kappa: both && pred.some(v => v) && pred.some(v => !v) ? kappa2(y, pred) : NaN, fn, fp,
+          err: p.length ? (fn + fp) / p.length : NaN};
+}
+function bestThr(p, y, crit) {                    // common.best_f1_threshold / analysis.best_kappa_threshold
+  const n = p.length, pos = y.reduce((a, b) => a + b, 0);
+  if (!pos || (crit === 'kappa' && pos === n) || !n) return 0.5;
+  const o = [...p.keys()].sort((a, b) => p[b] - p[a] || a - b);
+  let tp = 0, fp = 0, best = -Infinity, bt = 0.5;
+  for (let i = 0; i < n; i++) {
+    y[o[i]] ? tp++ : fp++;
+    if (i + 1 < n && p[o[i + 1]] === p[o[i]]) continue;
+    let s;
+    if (crit === 'kappa') { const pp = tp + fp, po = (tp + (n - pos - fp)) / n, pe = (pp * pos + (n - pp) * (n - pos)) / (n * n); s = pe < 1 ? (po - pe) / (1 - pe) : 0; }
+    else s = 2 * tp / (2 * tp + fp + (pos - tp));
+    if (s > best) { best = s; bt = p[o[i]]; }
+  }
+  return bt;
+}
+
+// ======================================================================= 상태
+const S = {
+  tab: 'p1', sel: null, testOpen: false,
+  f: {src: 'all', split: 'dev', rule: 'all', model: 'team', result: 'all'},
+  cond: 'base', team: D.meta.variants.includes('team_v3') ? 'team_v3' : D.meta.variants[D.meta.variants.length - 1], thrBy: 'kappa',
+  p1: {src: 'dna', tau: {...D.meta.tau}, start: D.meta.start_level || 2, mode: 'sim', k: 1, node: null},
+  p2: {group: 'rule', a: 'llamaguard', b: 'team', cell: null},
+  p3: {model: 'team', k: TOP, cause: null, brush: null},
+  p4: {model: 'team', src: 'dna', thr: null, tau: null, bnode: '', bv: 0, unit: null, rule: null, edit: null, busy: false},
+  server: false,
+};
+try { const t = localStorage.getItem('sys_tab'); if (t) S.tab = t; } catch (e) {}
+
+const realModel = m => m === 'team' ? S.team : m;
+function pOf(m, cond, i) {
+  const k = realModel(m), J = D.judg[k];
+  if (!J) return null;
+  const arr = RULE_FREE.has(m) ? J.none : J[cond];
+  return arr ? arr[i] : null;
+}
+const THR = new Map();
+function thrOf(src, m, cond) {                    // dev에서 고른 임계값 (필터와 상관없이 고정)
+  const c = RULE_FREE.has(m) ? 'none' : cond, key = [src, realModel(m), c, S.thrBy].join('|');
+  if (!THR.has(key)) {
+    const p = [], y = [];
+    for (let i = 0; i < N; i++) if (TX.src[i] === src && TX.split[i] === 'dev') { const v = pOf(m, cond, i); if (v != null) { p.push(v); y.push(TX.y[i]); } }
+    THR.set(key, p.length ? bestThr(p, y, S.thrBy) : 0.5);
+  }
+  return THR.get(key);
+}
+function predOf(m, cond, i) { const v = pOf(m, cond, i); return v == null ? null : (v >= thrOf(TX.src[i], m, cond) ? 1 : 0); }
+function inFilter(i, o = {}) {
+  const f = S.f;
+  if (TX.split[i] === 'test' && !S.testOpen) return false;
+  if (f.split !== 'all' && TX.split[i] !== f.split) return false;
+  if (f.src !== 'all' && TX.src[i] !== f.src) return false;
+  if (f.rule !== 'all' && TX.unit[i] !== f.rule) return false;
+  if (o.judged && !TX.judged[i]) return false;
+  if (f.result !== 'all' && !o.noResult) {
+    const pr = predOf(f.model, S.cond, i); if (pr == null) return false;
+    if ((f.result === 'ok') !== (pr === TX.y[i])) return false;
+  }
+  return true;
+}
+const filtered = o => { const out = []; for (let i = 0; i < N; i++) if (inFilter(i, o)) out.push(i); return out; };
+const fmt = (v, d = 3) => v == null || Number.isNaN(v) ? '–' : (+v).toFixed(d);
+const pct = v => v == null || Number.isNaN(v) ? '–' : (v * 100).toFixed(1) + '%';
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+const nname = id => NODE.get(id)?.name ?? id ?? '';
+const short = (s, n) => (s = String(s)).length > n ? s.slice(0, n - 1) + '…' : s;
+const $ = id => document.getElementById(id);
+const label = y => y ? '<span class="chip v">위반</span>' : '<span class="chip s">정상</span>';
+
+// 기본 τ의 BFS 결과 (P3 원인 1의 '정답 순위', P4 비교 기준)
+const BASE_RS = new Map();
+function baseSearch(i) {
+  if (!BASE_RS.has(i)) BASE_RS.set(i, searchOne(i, D.meta.tau[TX.src[i]], D.meta.start_level || 2));
+  return BASE_RS.get(i);
+}
+
+// ======================================================================= 공통: 필터, 선택, 원문 보기
+function initFilters() {
+  $('built').textContent = `· 데이터 ${D.meta.built}`;
+  $('fModel').innerHTML = MODELS.map(m => `<option value="${m}">${MNAME[m]}</option>`).join('');
+  $('fModel').value = S.f.model;
+  $('fCond').innerHTML = CONDS.map(c => `<option value="${c}">${CNAME[c]}</option>`).join('');
+  $('fTeam').innerHTML = D.meta.variants.map(v => `<option>${v}</option>`).join('');
+  $('fTeam').value = S.team;
+  if (D.meta.splits.includes('test')) { $('testWrap').hidden = false; $('fSplit').innerHTML += '<option value="test">test</option><option value="all">dev + test</option>'; }
+  fillRuleFilter();
+  const on = (id, fn) => $(id).addEventListener('change', e => { fn(e.target); render(); });
+  on('fSrc', el => { S.f.src = el.value; S.f.rule = 'all'; fillRuleFilter(); if (el.value === 'dna' || el.value === 'jigsaw') { S.p1.src = el.value; S.p4.src = el.value; } });
+  on('fSplit', el => { S.f.split = el.value; });
+  on('fTest', el => { S.testOpen = el.checked; });
+  on('fRule', el => { S.f.rule = el.value; });
+  on('fModel', el => { S.f.model = el.value; });
+  on('fResult', el => { S.f.result = el.value; });
+  on('fCond', el => { S.cond = el.value; });
+  on('fTeam', el => { S.team = el.value; });
+  on('fThr', el => { S.thrBy = el.value; });
+  document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => { S.tab = b.dataset.t; try { localStorage.setItem('sys_tab', S.tab); } catch (e) {} render(); }));
+  $('modal').addEventListener('click', e => { if (e.target.id === 'modal') $('modal').classList.remove('on'); });
+}
+function fillRuleFilter() {
+  const srcs = S.f.src === 'all' ? ['dna', 'jigsaw'] : [S.f.src];
+  let h = '<option value="all">전체</option>';
+  for (const s of srcs) if (TREE[s]) h += `<optgroup label="${SRCNAME[s]}">` + TREE[s].units.map(u => `<option value="${u}">${esc(short(nname(u), 50))}</option>`).join('') + '</optgroup>';
+  $('fRule').innerHTML = h; $('fRule').value = S.f.rule;
+}
+function select(i) { S.sel = i; render(); }
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-i]');
+  if (el) { if (e.target.closest('#modal')) $('modal').classList.remove('on'); select(+el.dataset.i); }
+  const b = e.target.closest('.blur'); if (b) b.classList.remove('blur');
+});
+function renderDetail() {
+  const el = $('detail'), i = S.sel;
+  if (i == null) { el.innerHTML = '<h2>원문 보기</h2><p class="hint">어느 뷰에서든 텍스트(행, 점, 막대 목록)를 누르면 여기에 원문과 맥락, 사람 라벨, 모델별 위반 확률이 나옵니다. 모든 뷰에서 같은 텍스트가 강조됩니다.</p>'; return; }
+  const src = TX.src[i], ctxName = {dna: '질문', jigsaw: '서브레딧', prosocial: '앞선 대화'}[src];
+  const harmful = TX.y[i] === 1;
+  let rows = '';
+  for (const m of MODELS) {
+    const p = pOf(m, S.cond, i); if (p == null) continue;
+    const pr = p >= thrOf(src, m, S.cond) ? 1 : 0;
+    rows += `<tr><td><span class="dot" style="background:${MCOL[m]}"></span>${MNAME[m]}${m === 'team' ? ` <span class="hint">${S.team}</span>` : ''}</td><td class="n">${fmt(p)}</td><td class="n">${fmt(thrOf(src, m, S.cond))}</td><td>${pr === TX.y[i] ? '<span class="chip ok">맞음</span>' : '<span class="chip bad">틀림</span>'}</td></tr>`;
+  }
+  const rs = TREE[src] && TREE[src].rowOf ? baseSearch(i) : null;
+  el.innerHTML = `<h2>원문 보기</h2>
+    <div class="mono">${esc(TX.id[i])}</div>
+    <p>${SRCNAME[src]} · ${TX.split[i]} · 사람 라벨 ${label(TX.y[i])} ${TX.resp[i] ? '· 응답 ' + esc(TX.resp[i]) : ''}</p>
+    ${TX.gold[i] ? `<p class="hint">정답 규칙: <b>${esc(nname(TX.gold[i]))}</b>${rs ? `<br>찾은 1위: ${esc(nname(rs.top1))} (정답 순위 ${rs.goldRank ?? '없음'})` : ''}</p>` : ''}
+    <h3>${ctxName}</h3><div class="textbox">${esc(TX.ctx[i]) || '<span class="hint">없음</span>'}</div>
+    <h3>판정 대상 ${harmful ? '<span class="hint">(위반 텍스트라 가려 둠, 누르면 보임)</span>' : ''}</h3>
+    <div class="textbox ${harmful ? 'blur' : ''}">${esc(TX.text[i])}</div>
+    ${rows ? `<h3>모델별 위반 확률 (${CNAME[S.cond]} 조건)</h3><table><tr><th>모델</th><th class="n">p</th><th class="n">임계값</th><th></th></tr>${rows}</table>` : '<p class="hint">판정한 표본이 아닙니다 (규칙 찾기만 있음).</p>'}`;
+}
+function textRows(list, cols, limit = 60) {        // 텍스트 목록 표 (누르면 선택)
+  const head = '<tr>' + cols.map(c => `<th class="${c.n ? 'n' : ''}">${c.h}</th>`).join('') + '</tr>';
+  const body = list.slice(0, limit).map(i => `<tr class="click ${i === S.sel ? 'sel' : ''}" data-i="${i}">` + cols.map(c => `<td class="${c.n ? 'n' : ''}">${c.f(i)}</td>`).join('') + '</tr>').join('');
+  return `<div class="scroll"><table>${head}${body}</table></div>${list.length > limit ? `<p class="hint">${list.length}건 중 ${limit}건 표시</p>` : ''}`;
+}
+
+// ======================================================================= P1 규칙 찾기
+const P1C = new Map();
+function p1Results(src) {
+  const tau = S.p1.tau[src], key = [src, tau, S.p1.start, JSON.stringify(S.f), S.cond, S.thrBy, S.testOpen].join('|');
+  if (P1C.has(key)) return P1C.get(key);
+  const ids = filtered().filter(i => TX.src[i] === src && TREE[src].rowOf.has(i) && TX.gold[i]);
+  const res = new Map();
+  for (const i of ids) {
+    const r = searchOne(i, tau, S.p1.start);
+    const lo = bfs(src, simOf(i), tau - DELTA, S.p1.start).leaves[0], hi = bfs(src, simOf(i), tau + DELTA, S.p1.start).leaves[0];
+    r.boundary = lo !== r.top1 || hi !== r.top1;
+    res.set(i, r);
+  }
+  const out = {ids, res}; P1C.clear(); P1C.set(key, out); return out;
+}
+function renderP1() {
+  const src = (S.f.src === 'dna' || S.f.src === 'jigsaw') ? S.f.src : S.p1.src, t = TREE[src];
+  if (!t || !t.rowOf) return '<div class="card">유사도 데이터가 없습니다.</div>';
+  const {ids, res} = p1Results(src), tau = S.p1.tau[src];
+  const R = ids.map(i => res.get(i)), n = R.length, mean = f => n ? R.reduce((a, r) => a + f(r), 0) / n : NaN;
+  const sel = S.sel != null && res.has(S.sel) ? S.sel : null, sr = sel != null ? res.get(sel) : null;
+  const bnd = ids.filter(i => res.get(i).boundary).sort((a, b) => Math.abs(res.get(a).sc(res.get(a).top1) - tau) - Math.abs(res.get(b).sc(res.get(b).top1) - tau));
+  const wrong = ids.filter(i => !res.get(i).ok1);
+  const tmin = src === 'dna' ? 0 : -0.15, tmax = src === 'dna' ? 0.5 : 0.35;
+  let h = `<div class="card"><h2>P1 규칙 찾기 점검</h2><p class="q">이 텍스트는 왜 이 규칙으로 찾아졌나? 정답과 다르면 어느 단계에서 갈라졌나? τ를 조금만 바꿔도 결과가 바뀌는 텍스트는?</p>
+    <div class="row">
+      <label class="slider">트리 <select id="p1src">${['dna', 'jigsaw'].filter(s => TREE[s]).map(s => `<option value="${s}" ${s === src ? 'selected' : ''}>${SRCNAME[s]}</option>`).join('')}</select></label>
+      <label class="slider">τ <input type="range" id="p1tau" min="${tmin}" max="${tmax}" step="0.002" value="${tau}"><b>${tau.toFixed(3)}</b></label>
+      <button id="p1reset">τ 원래대로 (${D.meta.tau[src].toFixed(3)})</button>
+      <label class="slider">시작 단계 <select id="p1start"><option value="2" ${S.p1.start === 2 ? 'selected' : ''}>중분류 (PDF)</option><option value="1" ${S.p1.start === 1 ? 'selected' : ''}>대분류</option></select></label>
+      <label class="slider">보기 <select id="p1mode"><option value="sim" ${S.p1.mode === 'sim' ? 'selected' : ''}>선택한 텍스트의 유사도</option><option value="agg" ${S.p1.mode === 'agg' ? 'selected' : ''}>집계 (노드별 top-k 정확도)</option></select></label>
+      ${S.p1.mode === 'agg' ? `<label class="slider">k <select id="p1k"><option ${S.p1.k === 1 ? 'selected' : ''}>1</option><option ${S.p1.k === 3 ? 'selected' : ''}>3</option></select></label>` : ''}
+    </div>
+    <div class="kpis" style="margin-top:10px">
+      <div class="kpi"><b>${pct(mean(r => r.ok1))}</b><span>top-1 정확도 (${src === 'dna' ? '소분류' : '규칙'})</span></div>
+      <div class="kpi"><b>${pct(mean(r => r.ok3))}</b><span>top-3 정확도</span></div>
+      ${src === 'dna' ? `<div class="kpi"><b>${pct(mean(r => r.l2rank === 1))}</b><span>중분류 top-1</span></div><div class="kpi"><b>${pct(mean(r => r.l2rank && r.l2rank <= 3))}</b><span>중분류 top-3</span></div>` : ''}
+      <div class="kpi"><b>${pct(mean(r => r.eff))}</b><span>규칙 찾기 효율 (비교 노드 ÷ 전체 ${t.ids.length})</span></div>
+      <div class="kpi"><b>${bnd.length}</b><span>경계 사례 (τ±${DELTA}에 1위가 바뀜)</span></div>
+      <div class="kpi"><b>${n.toLocaleString()}</b><span>텍스트 (필터 적용)</span></div>
+    </div>
+    ${p1Tree(src, sr, res, ids)}
+    <div class="legend">${S.p1.mode === 'sim' ? `<span><span class="dot" style="background:rgba(var(--cool),.85)"></span>유사도 높음</span><span>흐린 노드 = BFS가 비교하지 않음</span><span><b style="color:var(--viol)">빨간 테두리</b> = 정답 경로</span><span><b>검은 테두리</b> = 찾은 1위 경로</span><span><b>굵은 숫자</b> = τ 이상(남김)</span>` : `<span><span class="dot" style="background:rgba(var(--heat),.8)"></span>정확도 낮음 = 자주 틀리는 가지</span><span>흐린 노드 = 정답 텍스트 ${MIN_N}건 미만</span>`}</div>
+    ${sr ? `<p><b>${esc(TX.id[sel])}</b>: 찾은 규칙 ${sr.leaves.slice(0, 5).map((l, k) => `${k + 1}. ${esc(short(nname(l), 40))} (${fmt(sr.sc(l))})`).join(' · ')}<br>정답 ${esc(nname(sr.gold))} (${fmt(sr.sc(sr.gold))}, 순위 ${sr.goldRank ?? '없음'}) · 처음 갈라진 단계 <b>${sr.div}</b> · BFS가 정답을 잘라 낸 단계 <b>${sr.lost}</b> · 비교 노드 ${sr.ncmp}개${sr.fb ? ' · τ를 넘는 노드가 없어 1위만 남긴 단계 있음' : ''}</p>` : '<p class="hint">아래 목록이나 다른 뷰에서 텍스트를 고르면 트리 위에 단계별 유사도, BFS 경로, 정답 경로가 겹쳐 보입니다.</p>'}
+  </div>`;
+  if (S.p1.node) h += p1NodeCard(src, S.p1.node, res, ids);
+  h += `<div class="row"><div class="card grow"><h2>경계 사례 ${bnd.length}건</h2><p class="q">1위 규칙의 유사도가 τ에 가까운 순</p>${textRows(bnd, [
+      {h: 'text_id', f: i => esc(TX.id[i])}, {h: '1위', f: i => esc(short(nname(res.get(i).top1), 28))},
+      {h: '유사도', n: 1, f: i => fmt(res.get(i).sc(res.get(i).top1))}, {h: '정답?', f: i => res.get(i).ok1 ? '<span class="chip ok">맞음</span>' : '<span class="chip bad">틀림</span>'}])}</div>
+    <div class="card grow"><h2>1위가 틀린 텍스트 ${wrong.length}건</h2>${textRows(wrong, [
+      {h: 'text_id', f: i => esc(TX.id[i])}, {h: '갈라진 단계', f: i => res.get(i).div}, {h: '정답 순위', n: 1, f: i => res.get(i).goldRank ?? '없음'},
+      {h: '정답', f: i => esc(short(nname(TX.gold[i]), 26))}])}</div></div>`;
+  return h;
+}
+function p1Tree(src, sr, res, ids) {
+  const t = TREE[src], W = 880, cols = t.maxLv, colW = src === 'dna' ? [150, 250, 480] : [180, 700];
+  const leafH = src === 'dna' ? 15 : 60, H = t.leaves.length * leafH;
+  const y0 = {}, hh = {}; let y = 0;
+  const place = id => { if (!t.children[id].length) { y0[id] = y; hh[id] = leafH; y += leafH; return; } const s = y; t.children[id].forEach(place); y0[id] = s; hh[id] = y - s; };
+  t.ids.filter(id => t.level[id] === 1).forEach(place);
+  const x0 = [0]; for (let l = 1; l < cols; l++) x0.push(x0[l - 1] + colW[l - 1]);
+  const goldP = sr ? new Set(t.path(sr.gold)) : null, topP = sr && sr.top1 ? new Set(t.path(sr.top1)) : null;
+  let agg = null;
+  if (!sr && S.p1.mode === 'agg' || S.p1.mode === 'agg') {
+    agg = {}; const k = S.p1.k;
+    for (const i of ids) { const r = res.get(i), ok = k === 1 ? r.ok1 : r.ok3; for (const n of t.path(TX.gold[i])) { (agg[n] = agg[n] || [0, 0])[0] += ok; agg[n][1]++; } }
+  }
+  let lo = Infinity, hi = -Infinity;
+  if (sr && S.p1.mode === 'sim') for (const n of t.ids) { const v = sr.sc(n); lo = Math.min(lo, v); hi = Math.max(hi, v); }
+  const tau = S.p1.tau[src];
+  let g = '';
+  for (const id of t.ids) {
+    const l = t.level[id] - 1, x = x0[l], w = colW[l] - 3, yy = y0[id], hgt = hh[id] - 2;
+    let fill = 'var(--sunk)', op = 1, txt = esc(short(nname(id), Math.floor(w / 6.6)));
+    let val = '';
+    if (S.p1.mode === 'agg') {
+      const a = agg[id];
+      if (a) { const acc = a[0] / a[1]; fill = `rgba(var(--heat),${(0.1 + 0.75 * (1 - acc)).toFixed(2)})`; op = a[1] < MIN_N ? 0.4 : 1; val = `${Math.round(acc * 100)}% (${a[1]})`; }
+      else op = 0.35;
+    } else if (sr) {
+      const v = sr.sc(id), a = hi > lo ? (v - lo) / (hi - lo) : 0.5;
+      fill = `rgba(var(--cool),${(0.08 + 0.8 * a).toFixed(2)})`;
+      op = sr.compared.has(id) ? 1 : 0.28;
+      val = (v >= tau && sr.compared.has(id) ? '<tspan font-weight="700">' : '<tspan>') + v.toFixed(3) + '</tspan>';
+    }
+    const stroke = goldP && goldP.has(id) ? 'var(--viol)' : topP && topP.has(id) ? 'var(--ink)' : 'none';
+    const sw = goldP && goldP.has(id) ? 2.5 : 2;
+    const valW = val ? 74 : 0;
+    g += `<g class="bar" data-node="${id}" opacity="${op}"><rect x="${x}" y="${yy}" width="${w}" height="${hgt}" rx="3" fill="${fill}" stroke="${stroke}" stroke-width="${sw}"${topP && topP.has(id) && goldP && goldP.has(id) ? ' stroke-dasharray="6 3"' : ''}><title>${esc(NODE.get(id).text)}</title></rect>`;
+    if (hgt >= 11) g += `<text x="${x + 5}" y="${yy + Math.min(hgt / 2, 12) + 4}" font-size="11" fill="var(--ink)">${esc(short(nname(id), Math.floor((w - valW) / 6.4)))}</text>${val ? `<text x="${x + w - 5}" y="${yy + Math.min(hgt / 2, 12) + 4}" font-size="10.5" text-anchor="end" fill="var(--ink)">${val}</text>` : ''}`;
+    g += '</g>';
+  }
+  const lab = src === 'dna' ? ['대분류', '중분류 (위해 유형)', '소분류 (규칙)'] : ['대분류', '규칙'];
+  const head = lab.map((s, l) => `<text x="${x0[l] + 4}" y="-6" font-size="11.5" fill="var(--muted)">${s}${l + 1 < S.p1.start ? ' (비교 안 함)' : ''}</text>`).join('');
+  return `<div style="overflow-x:auto"><svg viewBox="0 -20 ${W} ${H + 24}" width="100%" style="min-width:640px" id="p1svg">${head}${g}</svg></div>`;
+}
+function p1NodeCard(src, id, res, ids) {
+  const t = TREE[src], under = new Set(t.leavesUnder(id));
+  const gold = ids.filter(i => under.has(TX.gold[i])), found = ids.filter(i => under.has(res.get(i).top1));
+  const acc = gold.length ? gold.filter(i => res.get(i).ok1).length / gold.length : NaN;
+  return `<div class="card"><h2>${esc(nname(id))} <button id="p1close" style="float:right">닫기</button></h2>
+    <p class="textbox">${esc(NODE.get(id).text)}</p>
+    <div class="row"><div class="grow"><h3>이 규칙(가지)이 정답인 텍스트 ${gold.length}건 · top-1 ${pct(acc)}</h3>${textRows(gold, [
+      {h: 'text_id', f: i => esc(TX.id[i])}, {h: '찾은 1위', f: i => esc(short(nname(res.get(i).top1), 26))}, {h: '', f: i => res.get(i).ok1 ? '<span class="chip ok">맞음</span>' : '<span class="chip bad">틀림</span>'}], 40)}</div>
+    <div class="grow"><h3>이 규칙(가지)으로 찾아진 텍스트 ${found.length}건</h3>${textRows(found, [
+      {h: 'text_id', f: i => esc(TX.id[i])}, {h: '정답', f: i => esc(short(nname(TX.gold[i]), 26))}, {h: '', f: i => res.get(i).ok1 ? '<span class="chip ok">맞음</span>' : '<span class="chip bad">틀림</span>'}], 40)}</div></div></div>`;
+}
+function bindP1() {
+  const src = (S.f.src === 'dna' || S.f.src === 'jigsaw') ? S.f.src : S.p1.src;
+  $('p1src').onchange = e => { S.p1.src = e.target.value; S.p1.node = null; render(); };
+  const tau = $('p1tau'); tau.oninput = e => { tau.nextElementSibling.textContent = (+e.target.value).toFixed(3); };
+  tau.onchange = e => { S.p1.tau[src] = +e.target.value; render(); };
+  $('p1reset').onclick = () => { S.p1.tau[src] = D.meta.tau[src]; render(); };
+  $('p1start').onchange = e => { S.p1.start = +e.target.value; render(); };
+  $('p1mode').onchange = e => { S.p1.mode = e.target.value; render(); };
+  if ($('p1k')) $('p1k').onchange = e => { S.p1.k = +e.target.value; render(); };
+  if ($('p1close')) $('p1close').onclick = () => { S.p1.node = null; render(); };
+  document.querySelectorAll('#p1svg [data-node]').forEach(g => g.addEventListener('click', () => { S.p1.node = g.dataset.node; render(); }));
+}
+
+// ======================================================================= P2 판정 비교
+function groupOf(i, by) {
+  if (by === 'src') return SRCNAME[TX.src[i]];
+  if (by === 'resp') return TX.resp[i] || '(응답 LLM 없음)';
+  return TX.unit[i] ? nname(TX.unit[i]) : '(정답 규칙 없음)';
+}
+function renderP2() {
+  const ids = filtered({judged: true}), by = S.p2.group;
+  const groups = new Map();
+  for (const i of ids) { const g = groupOf(i, by); if (!groups.has(g)) groups.set(g, []); groups.get(g).push(i); }
+  const gs = [...groups.keys()].sort((a, b) => groups.get(b).length - groups.get(a).length);
+  const cell = (list, m) => { let n = 0, w = 0; for (const i of list) { const pr = predOf(m, S.cond, i); if (pr == null) continue; n++; w += pr !== TX.y[i]; } return {n, w, r: n ? w / n : NaN}; };
+  let mx = `<table><tr><th>${{rule: '규칙(범주)', resp: '응답 LLM', src: '출처'}[by]}</th><th class="n">건수</th>${MODELS.map(m => `<th class="n">${MNAME[m]}</th>`).join('')}</tr>`;
+  for (const g of gs) {
+    const list = groups.get(g);
+    mx += `<tr><td>${esc(short(g, 46))}</td><td class="n">${list.length}</td>` + MODELS.map(m => {
+      const c = cell(list, m); if (!c.n) return '<td class="n hint">–</td>';
+      const on = S.p2.cell && S.p2.cell.g === g && S.p2.cell.m === m;
+      return `<td class="n" data-cell="${esc(g)}|${m}" style="cursor:pointer;background:rgba(var(--heat),${(0.06 + 0.8 * c.r).toFixed(2)});opacity:${c.n < 10 ? 0.45 : 1};${on ? 'outline:2px solid var(--ink)' : ''}">${pct(c.r)}<br><span class="hint">${c.w}/${c.n}</span></td>`;
+    }).join('') + '</tr>';
+  }
+  mx += '</table>';
+  const M = {}, P = {};
+  for (const m of MODELS) {
+    const p = [], y = [], ii = [];
+    for (const i of ids) { const v = pOf(m, S.cond, i); if (v != null) { p.push(v); y.push(TX.y[i]); ii.push(i); } }
+    if (!p.length) continue;
+    const pred = ii.map(i => predOf(m, S.cond, i)), mm = metrics(p, y, 0.5);
+    let tp = 0, fp = 0, fn = 0; ii.forEach((i, k) => { if (pred[k] && y[k]) tp++; else if (pred[k]) fp++; else if (y[k]) fn++; });
+    M[m] = {...mm, f1: tp ? 2 * tp / (2 * tp + fp + fn) : 0, kappa: kappa2(y, pred), fn, fp};
+    P[m] = new Map(ii.map((i, k) => [i, pred[k]]));
+  }
+  let mt = `<table><tr><th>모델</th><th class="n">건수</th><th class="n">ROC-AUC</th><th class="n">PR-AUC</th><th class="n">F1</th><th class="n">κ (사람)</th><th class="n">FN</th><th class="n">FP</th></tr>`;
+  for (const m of MODELS) if (M[m]) mt += `<tr><td><span class="dot" style="background:${MCOL[m]}"></span>${MNAME[m]}${m === 'team' ? ` <span class="hint">${S.team}</span>` : ''}</td><td class="n">${M[m].n}</td><td class="n">${fmt(M[m].auc)}</td><td class="n">${fmt(M[m].ap)}</td><td class="n">${fmt(M[m].f1)}</td><td class="n">${fmt(M[m].kappa)}</td><td class="n">${M[m].fn}</td><td class="n">${M[m].fp}</td></tr>`;
+  mt += '</table>';
+  let kp = '<table><tr><th>모델 쌍</th><th class="n">공통 건수</th><th class="n">κ</th></tr>';
+  const ms = MODELS.filter(m => P[m]);
+  for (let a = 0; a < ms.length; a++) for (let b = a + 1; b < ms.length; b++) {
+    const A = [], B = []; for (const [i, v] of P[ms[a]]) if (P[ms[b]].has(i)) { A.push(v); B.push(P[ms[b]].get(i)); }
+    kp += `<tr><td>${MNAME[ms[a]]} – ${MNAME[ms[b]]}</td><td class="n">${A.length}</td><td class="n">${fmt(kappa2(A, B))}</td></tr>`;
+  }
+  kp += '</table>';
+  let cellList = '';
+  if (S.p2.cell) {
+    const {g, m} = S.p2.cell, list = (groups.get(g) || []).filter(i => pOf(m, S.cond, i) != null);
+    cellList = `<div class="card"><h2>${esc(short(g, 60))} × ${MNAME[m]} · ${list.length}건 <button id="p2close" style="float:right">닫기</button></h2>${textRows(list.sort((a, b) => (predOf(m, S.cond, b) !== TX.y[b]) - (predOf(m, S.cond, a) !== TX.y[a])), [
+      {h: 'text_id', f: i => esc(TX.id[i])}, {h: '라벨', f: i => label(TX.y[i])},
+      ...MODELS.map(mm => ({h: MNAME[mm], n: 1, f: i => { const v = pOf(mm, S.cond, i); if (v == null) return '–'; const ok = predOf(mm, S.cond, i) === TX.y[i]; return `<span style="color:${ok ? 'inherit' : 'var(--viol)'}">${fmt(v)}</span>`; }}))], 80)}</div>`;
+  }
+  return `<div class="card"><h2>P2 판정 비교</h2><p class="q">기준 판정 모델 3종과 팀 판정기는 서로, 또 사람 라벨과 어떤 텍스트에서 엇갈리나? 규칙·응답 LLM별로 오판이 한쪽으로 쏠리나?</p>
+    ${S.f.src === 'all' ? '<div class="warn">출처를 섞으면 AUC가 출처별 확률 크기 차이에 영향을 받습니다. PDF 지표는 출처별로 따로 봅니다 (위 필터에서 출처 선택).</div>' : ''}
+    <p class="hint">${CNAME[S.cond]} 조건 · 임계값은 출처·모델·조건마다 dev ${S.thrBy === 'kappa' ? 'κ' : 'F1'} 최대. Llama Guard·Qwen3Guard는 규칙을 받지 않아 조건과 상관없음.</p>
+    <div class="row"><div class="grow">${mt}</div><div style="flex:0 1 330px"><h3 style="margin-top:0">판정 모델 간 일치도 (6쌍)</h3>${kp}</div></div></div>
+    <div class="card"><h2>모델 × ${{rule: '규칙', resp: '응답 LLM', src: '출처'}[by]} 잘못된 판정 비율</h2>
+    <div class="row"><label class="slider">묶음 기준 <select id="p2group"><option value="rule">규칙(범주)</option><option value="resp">응답 LLM</option><option value="src">출처</option></select></label><span class="hint">칸 = 오판 비율, 아래는 오판/건수. 10건 미만 칸은 흐리게. 칸을 누르면 텍스트 목록</span></div>
+    <div style="overflow-x:auto;margin-top:8px">${mx}</div></div>${cellList}
+    <div class="card"><h2>두 모델의 위반 확률</h2><p class="q">대각선에서 먼 점 = 두 모델의 판단이 엇갈린 텍스트. 점을 누르면 원문</p>
+    <div class="row"><label class="slider">x <select id="p2a">${MODELS.map(m => `<option value="${m}" ${m === S.p2.a ? 'selected' : ''}>${MNAME[m]}</option>`).join('')}</select></label>
+    <label class="slider">y <select id="p2b">${MODELS.map(m => `<option value="${m}" ${m === S.p2.b ? 'selected' : ''}>${MNAME[m]}</option>`).join('')}</select></label></div>
+    ${p2Scatter(ids)}</div>`;
+}
+function p2Scatter(ids) {
+  const a = S.p2.a, b = S.p2.b, W = 420, Hh = 420, m = 36, sz = W - m - 10;
+  const pts = ids.map(i => [i, pOf(a, S.cond, i), pOf(b, S.cond, i)]).filter(d => d[1] != null && d[2] != null);
+  const X = v => m + v * sz, Y = v => 10 + (1 - v) * sz;
+  let g = `<rect x="${m}" y="10" width="${sz}" height="${sz}" fill="var(--sunk)"/><line x1="${X(0)}" y1="${Y(0)}" x2="${X(1)}" y2="${Y(1)}" stroke="var(--line)" stroke-width="1.5"/>`;
+  for (const v of [0, 0.25, 0.5, 0.75, 1]) g += `<text x="${X(v)}" y="${Hh - 14}" font-size="10" text-anchor="middle" fill="var(--muted)">${v}</text><text x="${m - 4}" y="${Y(v) + 3}" font-size="10" text-anchor="end" fill="var(--muted)">${v}</text>`;
+  const ta = pts.length ? thrOf(TX.src[pts[0][0]], a, S.cond) : 0, tb = pts.length ? thrOf(TX.src[pts[0][0]], b, S.cond) : 0;
+  if (S.f.src !== 'all') g += `<line x1="${X(ta)}" y1="10" x2="${X(ta)}" y2="${10 + sz}" stroke="var(--muted)" stroke-dasharray="3 3"/><line x1="${m}" y1="${Y(tb)}" x2="${m + sz}" y2="${Y(tb)}" stroke="var(--muted)" stroke-dasharray="3 3"/>`;
+  for (const [i, pa, pb] of pts) g += `<circle data-i="${i}" cx="${X(pa).toFixed(1)}" cy="${Y(pb).toFixed(1)}" r="${i === S.sel ? 6 : 3.2}" fill="${TX.y[i] ? 'var(--viol)' : 'var(--safe)'}" fill-opacity="${i === S.sel ? 1 : 0.6}" stroke="${i === S.sel ? 'var(--ink)' : 'none'}" stroke-width="2" style="cursor:pointer"><title>${esc(TX.id[i])}</title></circle>`;
+  g += `<text x="${m + sz / 2}" y="${Hh}" font-size="11.5" text-anchor="middle" fill="var(--ink)">${MNAME[a]}</text><text transform="translate(11 ${10 + sz / 2}) rotate(-90)" font-size="11.5" text-anchor="middle" fill="var(--ink)">${MNAME[b]}</text>`;
+  return `<svg viewBox="0 0 ${W} ${Hh + 4}" width="100%" style="max-width:${W}px">${g}</svg><div class="legend"><span><span class="dot" style="background:var(--viol)"></span>사람 라벨 위반</span><span><span class="dot" style="background:var(--safe)"></span>정상</span>${S.f.src !== 'all' ? '<span>점선 = 각 모델의 임계값</span>' : ''}<span>${pts.length}건</span></div>`;
+}
+function bindP2() {
+  $('p2group').value = S.p2.group; $('p2group').onchange = e => { S.p2.group = e.target.value; S.p2.cell = null; render(); };
+  $('p2a').onchange = e => { S.p2.a = e.target.value; render(); };
+  $('p2b').onchange = e => { S.p2.b = e.target.value; render(); };
+  document.querySelectorAll('[data-cell]').forEach(td => td.onclick = () => { const [g, m] = td.dataset.cell.split('|'); S.p2.cell = {g, m}; render(); });
+  if ($('p2close')) $('p2close').onclick = () => { S.p2.cell = null; render(); };
+}
+
+// ======================================================================= P3 잘못된 판정 진단 (원인 규칙 1–4)
+function diagnoseText(i, k) {                       // analysis.diagnose와 같은 순서
+  const y = TX.y[i], rm = ['shieldgemma', 'team'];
+  const base = {}, gold = {};
+  for (const m of MODELS) {
+    base[m] = predOf(m, 'base', i);
+    gold[m] = RULE_FREE.has(m) ? base[m] : predOf(m, 'rule_only', i);
+    if (base[m] == null || gold[m] == null) return null;
+  }
+  const rs = baseSearch(i), outK = !(rs && rs.goldRank && rs.goldRank <= k);
+  const allWrong = MODELS.every(m => gold[m] !== y), ruleAllWrong = rm.every(m => gold[m] !== y);
+  const out = {};
+  for (const m of MODELS) {
+    if (base[m] === y) { out[m] = null; continue; }
+    const isRule = !RULE_FREE.has(m);
+    let c, why;
+    if (isRule && (outK || gold[m] === y)) { c = 1; why = outK ? `정답 규칙이 상위 ${k}개 밖` : '정답 규칙만 넣으면 맞음 (다른 후보 규칙 때문에 바뀜)'; }
+    else if (allWrong) { c = 2; why = '모든 모델이 같은 답, 사람 라벨만 다름'; }
+    else if (isRule && ruleAllWrong) { c = 3; why = '규칙 문장을 받는 모델이 정답 규칙으로도 모두 틀림'; }
+    else { c = 4; why = '일부 모델만 틀림'; }
+    out[m] = {c, why, err: y ? 'FN (놓침)' : 'FP (과잉)', allWrong, outK, gold: gold[m] === y, rank: rs ? rs.goldRank : null};
+  }
+  return out;
+}
+function renderP3() {
+  const ids = filtered({judged: true}).filter(i => TX.src[i] !== 'prosocial');
+  const m = S.p3.model, k = S.p3.k, D3 = new Map();
+  for (const i of ids) { const d = diagnoseText(i, k); if (d) D3.set(i, d); }
+  const wrong = [...D3.keys()].filter(i => D3.get(i)[m]);
+  const cnt = {1: 0, 2: 0, 3: 0, 4: 0}; wrong.forEach(i => cnt[D3.get(i)[m].c]++);
+  const inBrush = i => { const b = S.p3.brush; return !b || (TX.cx[i] >= b.x0 && TX.cx[i] <= b.x1 && TX.cy[i] >= b.y0 && TX.cy[i] <= b.y1); };
+  const W = 520, Hh = 420, pts = [...D3.keys()].filter(i => TX.cx[i] != null);
+  const xs = pts.map(i => TX.cx[i]), ys = pts.map(i => TX.cy[i]);
+  const xmin = Math.min(...xs), xmax = Math.max(...xs), ymin = Math.min(...ys), ymax = Math.max(...ys);
+  const X = v => 10 + (v - xmin) / (xmax - xmin || 1) * (W - 20), Y = v => 10 + (1 - (v - ymin) / (ymax - ymin || 1)) * (Hh - 20);
+  S.p3.scale = {xmin, xmax, ymin, ymax, W, Hh};
+  let g = `<rect x="0" y="0" width="${W}" height="${Hh}" fill="var(--sunk)" rx="6"/>`;
+  for (const i of pts) { const d = D3.get(i)[m]; if (d) continue; g += `<circle data-i="${i}" cx="${X(TX.cx[i]).toFixed(1)}" cy="${Y(TX.cy[i]).toFixed(1)}" r="2.4" fill="var(--safe)" fill-opacity=".25"/>`; }
+  for (const i of pts) {
+    const d = D3.get(i)[m]; if (!d) continue;
+    const dim = (S.p3.cause && S.p3.cause !== d.c) || !inBrush(i);
+    g += `<circle data-diag="${i}" cx="${X(TX.cx[i]).toFixed(1)}" cy="${Y(TX.cy[i]).toFixed(1)}" r="${i === S.sel ? 7 : 4.5}" fill="${CCOL[d.c]}" fill-opacity="${dim ? 0.12 : 0.85}" stroke="${i === S.sel ? 'var(--ink)' : d.allWrong ? 'var(--c2)' : 'none'}" stroke-width="${i === S.sel ? 2.5 : 1.4}" style="cursor:pointer"><title>${esc(TX.id[i])} · ${CAUSES[d.c]}</title></circle>`;
+  }
+  if (S.p3.brush) { const b = S.p3.brush; g += `<rect x="${X(b.x0)}" y="${Y(b.y1)}" width="${X(b.x1) - X(b.x0)}" height="${Y(b.y0) - Y(b.y1)}" fill="none" stroke="var(--ink)" stroke-dasharray="4 3"/>`; }
+  const tot = wrong.length, mxc = Math.max(1, ...Object.values(cnt));
+  let bars = '';
+  [1, 2, 3, 4].forEach((c, r) => { const w = cnt[c] / mxc * 170, on = S.p3.cause === c;
+    bars += `<g class="bar" data-cause="${c}" opacity="${S.p3.cause && !on ? 0.4 : 1}"><text x="0" y="${r * 34 + 14}" font-size="12" fill="var(--ink)">${c}. ${CAUSES[c]}</text><rect x="0" y="${r * 34 + 19}" width="${Math.max(w, 1)}" height="10" rx="2" fill="${CCOL[c]}"/><text x="${w + 6}" y="${r * 34 + 28}" font-size="11.5" fill="var(--ink)">${cnt[c]} (${tot ? (cnt[c] / tot * 100).toFixed(1) : 0}%)</text></g>`; });
+  const region = wrong.filter(i => inBrush(i) && (!S.p3.cause || D3.get(i)[m].c === S.p3.cause));
+  let regionCard = '';
+  if (S.p3.brush || S.p3.cause) {
+    const rc = {1: 0, 2: 0, 3: 0, 4: 0}, rules = new Map(); region.forEach(i => { rc[D3.get(i)[m].c]++; const r = nname(TX.gold[i]); rules.set(r, (rules.get(r) || 0) + 1); });
+    const top = [...rules].sort((a, b) => b[1] - a[1]).slice(0, 8);
+    const inR = pts.filter(inBrush).length;
+    regionCard = `<div class="card"><h2>${S.p3.brush ? '고른 영역' : '고른 원인'}: 잘못된 판정 ${region.length}건${S.p3.brush ? ` / 텍스트 ${inR}건` : ''} <button id="p3clear" style="float:right">선택 해제</button></h2>
+      <div class="row"><div class="grow"><h3>원인 분포</h3>${[1, 2, 3, 4].map(c => `<div><span class="dot" style="background:${CCOL[c]}"></span>${CAUSES[c]} ${rc[c]}</div>`).join('')}
+      <h3>자주 나온 정답 규칙</h3>${top.map(([r, n]) => `<div>${esc(short(r, 48))} <b>${n}</b></div>`).join('')}</div>
+      <div class="grow">${textRows(region, [{h: 'text_id', f: i => esc(TX.id[i])}, {h: '원인', f: i => `<span class="dot" style="background:${CCOL[D3.get(i)[m].c]}"></span>${D3.get(i)[m].c}`}, {h: '오류', f: i => D3.get(i)[m].err}], 50)}</div></div></div>`;
+  }
+  // k에 따른 원인별 건수 (모델 합계)
+  let ktab = '<table><tr><th>k</th>' + [1, 2, 3, 4].map(c => `<th class="n">${CAUSES[c]}</th>`).join('') + '</tr>';
+  for (const kk of [1, 3, 5]) { const c = {1: 0, 2: 0, 3: 0, 4: 0}; for (const i of ids) { const d = diagnoseText(i, kk); if (!d) continue; for (const mm of MODELS) if (d[mm]) c[d[mm].c]++; }
+    ktab += `<tr${kk === k ? ' class="sel"' : ''}><td>${kk}</td>${[1, 2, 3, 4].map(cc => `<td class="n">${c[cc]}</td>`).join('')}</tr>`; }
+  ktab += '</table>';
+  let byModel = '<table><tr><th>원인</th>' + MODELS.map(mm => `<th class="n">${MNAME[mm]}</th>`).join('') + '</tr>';
+  const cm = {}; MODELS.forEach(mm => { cm[mm] = {1: 0, 2: 0, 3: 0, 4: 0, t: 0}; }); for (const d of D3.values()) for (const mm of MODELS) if (d[mm]) { cm[mm][d[mm].c]++; cm[mm].t++; }
+  [1, 2, 3, 4].forEach(c => { byModel += `<tr><td><span class="dot" style="background:${CCOL[c]}"></span>${CAUSES[c]}</td>` + MODELS.map(mm => `<td class="n">${cm[mm][c]} <span class="hint">${cm[mm].t ? (cm[mm][c] / cm[mm].t * 100).toFixed(0) + '%' : ''}</span></td>`).join('') + '</tr>'; });
+  byModel += '<tr><td><b>합계</b></td>' + MODELS.map(mm => `<td class="n"><b>${cm[mm].t}</b></td>`).join('') + '</tr></table>';
+  return `<div class="card"><h2>P3 잘못된 판정 진단</h2><p class="q">잘못된 판정은 규칙 찾기, 규칙 문장, 판정 모델, 사람 라벨 중 어디서 왔나? (대상: Do-Not-Answer, Jigsaw)</p>
+    <div class="row"><label class="slider">진단할 모델 <select id="p3m">${MODELS.map(mm => `<option value="${mm}" ${mm === m ? 'selected' : ''}>${MNAME[mm]}</option>`).join('')}</select></label>
+    <label class="slider">'규칙 찾기 문제'로 볼 상위 k <input type="range" id="p3k" min="1" max="10" step="1" value="${k}"><b>${k}</b></label>
+    <span class="hint">'기본' 조건 판정 기준 · 임계값 dev ${S.thrBy === 'kappa' ? 'κ' : 'F1'} 최대</span></div>
+    <div class="row" style="margin-top:10px"><div style="flex:1 1 ${W}px;min-width:0"><svg viewBox="0 0 ${W} ${Hh}" width="100%" style="max-width:${W}px;touch-action:none" id="p3map">${g}</svg>
+      <div class="legend">${[1, 2, 3, 4].map(c => `<span><span class="dot" style="background:${CCOL[c]}"></span>${CAUSES[c]}</span>`).join('')}<span>회색 = 맞은 판정</span><span>노란 테두리 = 모든 모델이 틀림</span><span>드래그해 영역 선택, 점을 누르면 진단</span></div></div>
+    <div style="flex:0 1 280px"><h3 style="margin-top:0">${MNAME[m]}의 잘못된 판정 ${tot}건</h3><svg viewBox="0 0 280 140" width="280" id="p3bars">${bars}</svg><p class="hint">막대를 누르면 그 원인만 강조</p></div></div></div>
+    ${regionCard}
+    <div class="row"><div class="card grow"><h2>모델별 원인 (필터 적용, k = ${k})</h2>${byModel}</div><div class="card grow"><h2>k에 따른 원인별 건수 (모델 합계)</h2>${ktab}</div></div>`;
+}
+function p3Popup(i) {
+  const d = diagnoseText(i, S.p3.k), m = S.p3.model, dm = d && d[m], rs = baseSearch(i);
+  let tab = `<table><tr><th>모델</th>${CONDS.map(c => `<th class="n">${CNAME[c]}</th>`).join('')}</tr>`;
+  for (const mm of MODELS) {
+    tab += `<tr><td><span class="dot" style="background:${MCOL[mm]}"></span>${MNAME[mm]}</td>` + CONDS.map(c => {
+      const v = pOf(mm, c, i); if (v == null) return '<td class="n">–</td>';
+      const ok = (v >= thrOf(TX.src[i], mm, c) ? 1 : 0) === TX.y[i];
+      return `<td class="n" style="color:${ok ? 'inherit' : 'var(--viol)'}">${fmt(v)}${RULE_FREE.has(mm) ? '' : ''}</td>`;
+    }).join('') + '</tr>';
+  }
+  tab += '</table>';
+  const steps = dm ? [
+    [1, RULE_FREE.has(m) ? '규칙을 받지 않는 모델이라 해당 없음' : `정답 규칙 순위 ${dm.rank ?? '없음'} (상위 ${S.p3.k}개 ${dm.outK ? '밖' : '안'}), 정답 규칙만 넣으면 ${dm.gold ? '맞음' : '틀림'}`],
+    [2, `정답 규칙을 넣었을 때 네 모델이 모두 틀림: ${dm.allWrong ? '예' : '아니오'}`],
+    [3, RULE_FREE.has(m) ? '규칙을 받지 않는 모델이라 해당 없음' : `ShieldGemma와 팀 판정기가 '규칙 문장만'에서 모두 틀림: ${['shieldgemma', 'team'].every(x => predOf(x, 'rule_only', i) !== TX.y[i]) ? '예' : '아니오'}`],
+    [4, '위에 해당하지 않으면 판정 모델 문제']] : [];
+  $('modalBody').innerHTML = `<h2>${esc(TX.id[i])} 진단 <button id="mclose" style="float:right">닫기</button></h2>
+    <p>${SRCNAME[TX.src[i]]} · 사람 라벨 ${label(TX.y[i])} ${dm ? `· ${MNAME[m]} <b style="color:${CCOL[dm.c]}">${dm.c}. ${CAUSES[dm.c]}</b> (${dm.err})` : `· ${MNAME[m]}은 맞게 판정`}</p>
+    <h3>찾은 규칙과 정답 규칙</h3>
+    <p>${rs ? rs.leaves.slice(0, TOP).map((l, k) => `<span class="chip" style="${l === TX.gold[i] ? 'border-color:var(--viol);color:var(--viol)' : ''}">${k + 1}. ${esc(short(nname(l), 36))}</span>`).join(' ') : ''}<br><span class="hint">정답: ${esc(nname(TX.gold[i]))} (순위 ${rs && rs.goldRank ? rs.goldRank : '없음'})</span></p>
+    <h3>4가지 조건에서 모델별 위반 확률</h3>${tab}<p class="hint">빨간 값 = 그 조건의 임계값에서 틀린 판정. Llama Guard·Qwen3Guard는 규칙을 받지 않아 조건마다 같은 값.</p>
+    ${dm ? `<h3>원인 규칙 1–4 중 어느 단계에서 정해졌나</h3><ol class="steps">${steps.map(([n, s]) => `<li class="${n === dm.c ? 'hit' : ''}" style="${n > dm.c ? 'opacity:.45' : ''}">${s}${n === dm.c ? ' ← 여기서 정해짐' : ''}</li>`).join('')}</ol>` : ''}
+    <p><button data-i="${i}">원문 보기</button></p>`;
+  $('modal').classList.add('on');
+  $('mclose').onclick = () => $('modal').classList.remove('on');
+}
+function bindP3() {
+  $('p3m').onchange = e => { S.p3.model = e.target.value; render(); };
+  const k = $('p3k'); k.oninput = e => { k.nextElementSibling.textContent = e.target.value; }; k.onchange = e => { S.p3.k = +e.target.value; render(); };
+  document.querySelectorAll('#p3bars [data-cause]').forEach(b => b.onclick = () => { const c = +b.dataset.cause; S.p3.cause = S.p3.cause === c ? null : c; render(); });
+  if ($('p3clear')) $('p3clear').onclick = () => { S.p3.cause = null; S.p3.brush = null; render(); };
+  const svg = $('p3map'); let st = null, rect = null;
+  const toData = e => { const r = svg.getBoundingClientRect(), s = S.p3.scale, px = (e.clientX - r.left) / r.width * s.W, py = (e.clientY - r.top) / r.height * s.Hh;
+    return [s.xmin + (px - 10) / (s.W - 20) * (s.xmax - s.xmin), s.ymin + (1 - (py - 10) / (s.Hh - 20)) * (s.ymax - s.ymin), px, py]; };
+  svg.addEventListener('pointerdown', e => { if (e.target.dataset.diag || e.target.dataset.i) return; st = toData(e); rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect'); rect.setAttribute('fill', 'var(--accent-soft)'); rect.setAttribute('stroke', 'var(--accent)'); svg.appendChild(rect); svg.setPointerCapture(e.pointerId); });
+  svg.addEventListener('pointermove', e => { if (!st) return; const c = toData(e); rect.setAttribute('x', Math.min(st[2], c[2])); rect.setAttribute('y', Math.min(st[3], c[3])); rect.setAttribute('width', Math.abs(c[2] - st[2])); rect.setAttribute('height', Math.abs(c[3] - st[3])); });
+  svg.addEventListener('pointerup', e => { if (!st) return; const c = toData(e);
+    if (Math.abs(c[2] - st[2]) > 6 && Math.abs(c[3] - st[3]) > 6) S.p3.brush = {x0: Math.min(st[0], c[0]), x1: Math.max(st[0], c[0]), y0: Math.min(st[1], c[1]), y1: Math.max(st[1], c[1])};
+    st = null; render(); });
+  svg.querySelectorAll('[data-diag]').forEach(c => c.addEventListener('click', () => { const i = +c.dataset.diag; S.sel = i; render(); p3Popup(i); }));
+}
+
+// ======================================================================= P4 수정 효과 확인
+const P4C = new Map();                                    // 계산값 캐시 (발표 시연용)
+const variantOf = m => m === 'shieldgemma' ? 'team_v0' : realModel(m);
+function p4Base(src, m, tau, boost, edit) {             // τ·우선순위·수정안을 반영한 '기본' 조건 위반 확률
+  const key = [src, realModel(m), tau, boost.node, boost.v, edit ? edit.id : '', JSON.stringify(S.f), S.testOpen].join('|');
+  if (P4C.has(key)) return P4C.get(key);
+  const ids = filtered({judged: true, noResult: true}).filter(i => TX.src[i] === src && pOf(m, 'base', i) != null);
+  const same = tau === D.meta.tau[src] && !boost.v && !edit, cache = D.cache[variantOf(m)] || {};
+  const out = new Map(); let missing = 0; const miss = [];
+  for (const i of ids) {
+    if (same) { out.set(i, pOf(m, 'base', i)); continue; }
+    const r = bfs(src, simOf(i, edit), tau, D.meta.start_level || 2, null, boost), ps = [];
+    let ok = true;
+    for (const leaf of r.leaves.slice(0, TOP)) {
+      let v;
+      if (edit && leaf === edit.rule) v = edit.p.get(i);
+      else { v = cache[TX.id[i] + '|' + leaf]; if (v == null && edit) v = edit.extra.get(TX.id[i] + '|' + leaf); }
+      if (v == null) { ok = false; miss.push([TX.id[i], leaf]); } else ps.push(v);
+    }
+    if (ok && ps.length) out.set(i, Math.max(...ps)); else missing++;
+  }
+  const res = {ids, p: out, missing, miss}; P4C.set(key, res); return res;
+}
+function renderP4() {
+  const src = S.p4.src, m = S.p4.model, t = TREE[src];
+  const thr0 = thrOf(src, m, 'base'), thr1 = S.p4.thr ?? thr0, tau0 = D.meta.tau[src], tau1 = S.p4.tau ?? tau0;
+  const boost = {node: S.p4.bnode, v: S.p4.bv};
+  const A = p4Base(src, m, tau0, {node: '', v: 0}, null), B = p4Base(src, m, tau1, boost, null);
+  const ids = A.ids.filter(i => B.p.has(i));
+  const y = ids.map(i => TX.y[i]), pa = ids.map(i => A.p.get(i)), pb = ids.map(i => B.p.get(i));
+  const ma = metrics(pa, y, thr0), mb = metrics(pb, y, thr1);
+  const fixed = [], broken = [];
+  ids.forEach((i, k) => { const a = pa[k] >= thr0 ? 1 : 0, b = pb[k] >= thr1 ? 1 : 0; if (a !== b) (b === y[k] ? fixed : broken).push(i); });
+  const rowsM = [['roc_auc', 'ROC-AUC', 'auc'], ['pr_auc', 'PR-AUC', 'ap'], ['f1', 'F1', 'f1'], ['precision', '정밀도', 'prec'], ['recall', '재현율', 'rec'], ['kappa', 'κ (사람)', 'kappa'], ['fn', 'FN (놓침)', 'fn'], ['fp', 'FP (과잉)', 'fp']];
+  const mtab = `<table><tr><th>지표</th><th class="n">원래 설정</th><th class="n">바꾼 설정</th><th class="n">변화</th></tr>${rowsM.map(([, nm, k]) => { const d = mb[k] - ma[k], int = k === 'fn' || k === 'fp';
+    return `<tr><td>${nm}</td><td class="n">${int ? ma[k] : fmt(ma[k])}</td><td class="n">${int ? mb[k] : fmt(mb[k])}</td><td class="n" style="color:${Math.abs(d) < 1e-9 || Number.isNaN(d) ? 'var(--muted)' : ((d > 0) !== int ? 'var(--ok)' : 'var(--viol)')}">${Number.isNaN(d) ? '–' : (d > 0 ? '+' : '') + (int ? d : d.toFixed(3))}</td></tr>`; }).join('')}</table>`;
+  const flipCols = [{h: 'text_id', f: i => esc(TX.id[i])}, {h: '라벨', f: i => label(TX.y[i])}, {h: 'p 전 → 후', n: 1, f: i => `${fmt(A.p.get(i))} → ${fmt(B.p.get(i))}`}];
+  const units = Object.values(TREE).flatMap(tt => tt.units);
+  const unit = S.p4.unit && units.includes(S.p4.unit) ? S.p4.unit : (t.units[0]);
+  const changed = S.p4.thr != null || S.p4.tau != null || S.p4.bv;
+  return `<div class="card"><h2>P4 수정 효과 확인</h2><p class="q">임계값·τ·우선순위를 바꾸면 어떤 판정이 뒤집히고 지표는 얼마나 바뀌나? ('기본' 조건, 필터 적용)</p>
+    <div class="row"><label class="slider">출처 <select id="p4src">${['dna', 'jigsaw'].filter(s => TREE[s]).map(s => `<option value="${s}" ${s === src ? 'selected' : ''}>${SRCNAME[s]}</option>`).join('')}</select></label>
+    <label class="slider">모델 <select id="p4m"><option value="shieldgemma" ${m === 'shieldgemma' ? 'selected' : ''}>ShieldGemma</option><option value="team" ${m === 'team' ? 'selected' : ''}>팀 판정기 (${S.team})</option></select></label>
+    <button id="p4reset" ${changed ? '' : 'disabled'}>원래 값으로 되돌리기</button></div>
+    <div class="row" style="margin-top:8px">
+      <label class="slider">판정 임계값 <input type="range" id="p4thr" min="0" max="1" step="0.001" value="${thr1}"><input type="number" id="p4thrn" min="0" max="1" step="0.001" value="${thr1.toFixed(4)}" style="width:80px"><span class="hint">원래 ${fmt(thr0, 4)}</span></label>
+      <label class="slider">τ <input type="range" id="p4tau" min="${src === 'dna' ? 0 : -0.15}" max="${src === 'dna' ? 0.5 : 0.35}" step="0.002" value="${tau1}"><b>${tau1.toFixed(3)}</b><span class="hint">원래 ${tau0.toFixed(3)}</span></label>
+      <label class="slider">우선순위 <select id="p4bnode"><option value="">(바꾸지 않음)</option>${t.units.map(u => `<option value="${u}" ${u === S.p4.bnode ? 'selected' : ''}>${esc(short(nname(u), 40))}</option>`).join('')}</select>
+        <input type="range" id="p4bv" min="-0.1" max="0.1" step="0.005" value="${S.p4.bv}"><b>${S.p4.bv > 0 ? '+' : ''}${(+S.p4.bv).toFixed(3)}</b></label>
+    </div>
+    ${B.missing ? `<div class="warn">바꾼 설정에서 새로 상위 5개에 든 (텍스트, 규칙) 판정이 캐시에 없어 텍스트 ${B.missing}건을 계산에서 뺐습니다. ${S.server ? `<button id="p4fill">빠진 판정 ${B.miss.length}건 채우기 (서버)</button>` : '로컬 서버(serve.py)를 켜면 여기서 채울 수 있습니다.'}</div>` : ''}
+    <div class="row" style="margin-top:10px"><div class="grow"><h3>원래 설정과 바꾼 설정 (${ids.length}건)</h3>${mtab}</div>
+    <div class="grow"><h3>뒤집힌 판정 ${fixed.length + broken.length}건</h3>
+      <svg viewBox="0 0 300 40" width="300"><rect x="0" y="6" width="${(fixed.length / Math.max(1, fixed.length + broken.length)) * 300}" height="14" fill="var(--ok)"/><rect x="${(fixed.length / Math.max(1, fixed.length + broken.length)) * 300}" y="6" width="${(broken.length / Math.max(1, fixed.length + broken.length)) * 300}" height="14" fill="var(--viol)"/><text x="0" y="36" font-size="11.5" fill="var(--ink)">맞게 바뀜 ${fixed.length}</text><text x="300" y="36" font-size="11.5" text-anchor="end" fill="var(--ink)">틀리게 바뀜 ${broken.length}</text></svg>
+      <div class="row"><div class="grow"><h3 style="color:var(--ok)">맞게 바뀜 ${fixed.length}</h3>${textRows(fixed, flipCols, 40)}</div><div class="grow"><h3 style="color:var(--viol)">틀리게 바뀜 ${broken.length}</h3>${textRows(broken, flipCols, 40)}</div></div></div></div>
+    <p class="hint">계산한 설정은 캐시해 두어 같은 값으로 돌아오면 바로 보입니다 (${P4C.size}개 저장).</p></div>
+    ${p4Unseen(unit)}
+    ${p4Edit(src, m)}
+    ${p4Saved()}`;
+}
+function p4Unseen(unit) {
+  const src = TREE.dna && TREE.dna.units.includes(unit) ? 'dna' : 'jigsaw';
+  const ids = filtered({judged: true, noResult: true}).filter(i => TX.src[i] === src && TX.unit[i] === unit);
+  const ms = ['shieldgemma', 'team'], A = {};
+  for (const m of ms) { A[m] = {}; for (const c of CONDS) { const p = [], y = []; for (const i of ids) { const v = pOf(m, c, i); if (v != null) { p.push(v); y.push(TX.y[i]); } } A[m][c] = auc(p, y); } }
+  const pos = ids.filter(i => TX.y[i]).length, small = pos < MIN_N || ids.length - pos < MIN_N;
+  const W = 520, rowH = 30, x0 = 120, X = v => x0 + (v - 0.3) / 0.7 * (W - x0 - 20);
+  let g = '';
+  for (const v of [0.3, 0.5, 0.7, 0.9, 1.0]) g += `<line x1="${X(v)}" y1="0" x2="${X(v)}" y2="${CONDS.length * rowH}" stroke="var(--line)"/><text x="${X(v)}" y="${CONDS.length * rowH + 14}" font-size="10.5" text-anchor="middle" fill="var(--muted)">${v}</text>`;
+  CONDS.forEach((c, r) => { g += `<text x="0" y="${r * rowH + 19}" font-size="12" fill="var(--ink)">${CNAME[c]}</text>`;
+    ms.forEach((m, k) => { const v = A[m][c]; if (Number.isNaN(v)) return; g += `<circle cx="${X(Math.max(0.3, v))}" cy="${r * rowH + 15}" r="6" fill="${MCOL[m]}"><title>${MNAME[m]} ${fmt(v)}</title></circle>`; }); });
+  const opts = Object.values(TREE).map(tt => `<optgroup label="${SRCNAME[tt.src]}">${tt.units.map(u => `<option value="${u}" ${u === unit ? 'selected' : ''}>${esc(short(nname(u), 50))}</option>`).join('')}</optgroup>`).join('');
+  const line = m => `${MNAME[m]}: 하락폭 ${fmt(A[m].base - A[m].excluded)}, 회복폭 규칙 문장만 ${fmt(A[m].rule_only - A[m].excluded)} · 규칙 문장 + 예시 ${fmt(A[m].rule_example - A[m].excluded)}`;
+  return `<div class="card"><h2>처음 보는 규칙</h2><p class="q">처음 보는 규칙에서는 성능이 얼마나 떨어지고, 규칙 문장과 예시를 넣으면 얼마나 회복되나? (실험 규칙: Jigsaw 2개, Do-Not-Answer 위해 유형 12개)</p>
+    <label class="slider">실험 규칙 <select id="p4unit">${opts}</select></label>
+    <p class="hint">이 규칙이 정답인 텍스트 ${ids.length}건 (위반 ${pos}건)${small ? ' · <b>위반이나 정상이 5건 미만이라 AUC가 크게 흔들립니다</b>' : ''}</p>
+    <svg viewBox="0 0 ${W} ${CONDS.length * rowH + 20}" width="100%" style="max-width:${W}px;opacity:${small ? 0.5 : 1}">${g}</svg>
+    <div class="legend">${ms.map(m => `<span><span class="dot" style="background:${MCOL[m]}"></span>${MNAME[m]}${m === 'team' ? ' ' + S.team : ''}</span>`).join('')}<span>x = ROC-AUC</span></div>
+    <p>${ms.map(line).join('<br>')}</p></div>`;
+}
+function p4Edit(src, m) {
+  const t = TREE[src], rule = S.p4.rule && t.leaves.includes(S.p4.rule) ? S.p4.rule : t.leaves[0], E = S.p4.edit;
+  let result = '';
+  if (E && E.rule === rule && E.src === src) result = p4EditResult(E, m);
+  return `<div class="card"><h2>규칙 문장 편집 → 다시 판정</h2><p class="q">규칙 문장을 고치거나 예시를 더해 팀 판정기로 다시 판정하면, 잘못된 판정이 얼마나 줄고 새로 틀리는 텍스트는 무엇인가?</p>
+    <label class="slider">규칙 <select id="p4rule">${t.leaves.map(l => `<option value="${l}" ${l === rule ? 'selected' : ''}>${esc(short(nname(l), 60))}</option>`).join('')}</select></label>
+    <h3>규칙 문장</h3><textarea id="p4text">${esc(E && E.rule === rule ? E.text : NODE.get(rule).text)}</textarea>
+    <h3>예시 (선택, 한 줄에 하나: <span class="mono">1: 위반 예시</span> 또는 <span class="mono">0: 비위반 예시</span>)</h3><textarea id="p4ex" placeholder="1: ...&#10;0: ...">${esc(E && E.rule === rule ? E.exText : '')}</textarea>
+    <p><button class="primary" id="p4run" ${S.server && !S.p4.busy ? '' : 'disabled'}>${S.p4.busy ? '판정 중…' : `다시 판정 (${m === 'shieldgemma' ? 'team_v0' : S.team})`}</button>
+    ${S.server ? '' : '<span class="hint">다시 판정은 로컬 서버가 필요합니다: <span class="mono">python scripts\\serve.py</span> 실행 후 http://127.0.0.1:8765 로 열기</span>'}</p>
+    ${result}</div>`;
+}
+function p4EditResult(E, m) {
+  const src = E.src, tau = D.meta.tau[src], none = {node: '', v: 0};
+  const A = p4Base(src, m, tau, none, null), B = p4Base(src, m, tau, none, E);
+  const ids = A.ids.filter(i => B.p.has(i)), thr = thrOf(src, m, 'base');
+  const y = ids.map(i => TX.y[i]), ma = metrics(ids.map(i => A.p.get(i)), y, thr), mb = metrics(ids.map(i => B.p.get(i)), y, thr);
+  const gold = A.ids.filter(i => TX.gold[i] === E.rule), thrR = thrOf(src, m, 'rule_only');
+  const ga = gold.map(i => pOf(m, 'rule_only', i)), gb = gold.map(i => E.pEx.get(i) ?? E.p.get(i) ?? pOf(m, 'rule_only', i)), gy = gold.map(i => TX.y[i]);
+  const ra = metrics(ga, gy, thrR), rb = metrics(gb, gy, thrR);
+  const fixed = ids.filter(i => (A.p.get(i) >= thr) !== (B.p.get(i) >= thr) && (B.p.get(i) >= thr ? 1 : 0) === TX.y[i]);
+  const broken = ids.filter(i => (A.p.get(i) >= thr) !== (B.p.get(i) >= thr) && (B.p.get(i) >= thr ? 1 : 0) !== TX.y[i]);
+  const inTop = (edit) => A.ids.filter(i => bfs(src, simOf(i, edit), tau, D.meta.start_level || 2).leaves.slice(0, TOP).includes(E.rule)).length;
+  E.summary = {base_before: {auc: ma.auc, f1: ma.f1}, base_after: {auc: mb.auc, f1: mb.f1}, rule_only_before: {auc: ra.auc, f1: ra.f1}, rule_only_after: {auc: rb.auc, f1: rb.f1}, fixed: fixed.length, broken: broken.length, n: ids.length, n_gold: gold.length};
+  const cols = [{h: 'text_id', f: i => esc(TX.id[i])}, {h: '라벨', f: i => label(TX.y[i])}, {h: 'p 전 → 후', n: 1, f: i => `${fmt(A.p.get(i))} → ${fmt(B.p.get(i))}`}];
+  return `<h3>결과 (${E.time}, ${E.variant}${E.examples.length ? `, 예시 ${E.examples.length}개` : ''})</h3>
+    <p class="hint">새 문장으로 유사도를 다시 계산: 이 규칙이 상위 5개에 든 텍스트 ${inTop(null)}건 → ${inTop(E)}건 · 다시 판정 ${E.nJudged}건</p>
+    <table><tr><th></th><th class="n">수정 전</th><th class="n">수정 후</th></tr>
+    <tr><td>'기본' AUC (${ids.length}건)</td><td class="n">${fmt(ma.auc)}</td><td class="n">${fmt(mb.auc)}</td></tr>
+    <tr><td>'기본' F1 (임계값 ${fmt(thr)})</td><td class="n">${fmt(ma.f1)}</td><td class="n">${fmt(mb.f1)}</td></tr>
+    <tr><td>정답이 이 규칙인 텍스트 AUC (${gold.length}건): 원래 '규칙 문장만' → 새 문장${E.examples.length ? ' + 예시' : ''}</td><td class="n">${fmt(ra.auc)}</td><td class="n">${fmt(rb.auc)}</td></tr>
+    <tr><td>같은 텍스트의 F1</td><td class="n">${fmt(ra.f1)}</td><td class="n">${fmt(rb.f1)}</td></tr></table>
+    <div class="row"><div class="grow"><h3 style="color:var(--ok)">고쳐진 판정 ${fixed.length}</h3>${textRows(fixed, cols, 30)}</div><div class="grow"><h3 style="color:var(--viol)">새로 틀린 판정 ${broken.length}</h3>${textRows(broken, cols, 30)}</div></div>
+    <p><button class="primary" id="p4save">수정안 저장</button> <button id="p4discard">수정안 버리기</button></p>`;
+}
+function proposals() { try { return JSON.parse(localStorage.getItem('rule_proposals') || '[]'); } catch (e) { return S._props || []; } }
+function saveProposals(list) { S._props = list; try { localStorage.setItem('rule_proposals', JSON.stringify(list)); } catch (e) {} }
+function p4Saved() {
+  const L = proposals();
+  if (!L.length) return '<div class="card"><h2>저장한 수정안 0건</h2><p class="hint">수정안을 저장하면 바꾼 내용과 전후 지표가 여기에 쌓입니다. 최종 규칙 개선안 3건의 근거로 씁니다.</p></div>';
+  return `<div class="card"><h2>저장한 수정안 ${L.length}건 <button id="p4dl" style="float:right">JSON 내려받기</button></h2><table><tr><th>시각</th><th>규칙</th><th>판정기</th><th class="n">기본 AUC 전→후</th><th class="n">고쳐짐/새로 틀림</th><th></th></tr>
+    ${L.map((p, k) => `<tr><td>${esc(p.time)}</td><td>${esc(short(nname(p.rule), 40))}</td><td>${esc(p.variant)}</td><td class="n">${fmt(p.metrics.base_before.auc)} → ${fmt(p.metrics.base_after.auc)}</td><td class="n">${p.metrics.fixed} / ${p.metrics.broken}</td><td><button data-del="${k}">삭제</button></td></tr>`).join('')}</table></div>`;
+}
+function bindP4() {
+  const src = S.p4.src;
+  $('p4src').onchange = e => { S.p4.src = e.target.value; S.p4.tau = null; S.p4.bnode = ''; S.p4.bv = 0; render(); };
+  $('p4m').onchange = e => { S.p4.model = e.target.value; S.p4.thr = null; render(); };
+  $('p4reset').onclick = () => { S.p4.thr = null; S.p4.tau = null; S.p4.bnode = ''; S.p4.bv = 0; render(); };
+  $('p4thr').onchange = e => { S.p4.thr = +e.target.value; render(); };
+  $('p4thr').oninput = e => { $('p4thrn').value = (+e.target.value).toFixed(4); };
+  $('p4thrn').onchange = e => { S.p4.thr = Math.min(1, Math.max(0, +e.target.value)); render(); };
+  const tau = $('p4tau'); tau.oninput = e => { tau.nextElementSibling.textContent = (+e.target.value).toFixed(3); }; tau.onchange = e => { S.p4.tau = +e.target.value; render(); };
+  $('p4bnode').onchange = e => { S.p4.bnode = e.target.value; if (!e.target.value) S.p4.bv = 0; render(); };
+  const bv = $('p4bv'); bv.oninput = e => { bv.nextElementSibling.textContent = (+e.target.value).toFixed(3); }; bv.onchange = e => { S.p4.bv = S.p4.bnode ? +e.target.value : 0; render(); };
+  $('p4unit').onchange = e => { S.p4.unit = e.target.value; render(); };
+  $('p4rule').onchange = e => { S.p4.rule = e.target.value; render(); };
+  if ($('p4run')) $('p4run').onclick = () => rejudge(src);
+  if ($('p4fill')) $('p4fill').onclick = () => fillMissing(src);
+  if ($('p4save')) $('p4save').onclick = saveEdit;
+  if ($('p4discard')) $('p4discard').onclick = () => { S.p4.edit = null; render(); };
+  if ($('p4dl')) $('p4dl').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(proposals(), null, 2)], {type: 'application/json'})); a.download = 'rule_proposals.json'; a.click(); };
+  document.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { const L = proposals(); L.splice(+b.dataset.del, 1); saveProposals(L); render(); });
+}
+function parseExamples(s) {
+  return s.split('\n').map(l => l.trim()).filter(Boolean).map(l => { const m = l.match(/^([01])\s*[:：]\s*(.+)$/); return m ? [m[2], +m[1]] : null; }).filter(Boolean);
+}
+async function rejudge(src) {
+  const m = S.p4.model, rule = $('p4rule').value, text = $('p4text').value.trim(), exText = $('p4ex').value, examples = parseExamples(exText);
+  const ids = filtered({judged: true, noResult: true}).filter(i => TX.src[i] === src).map(i => TX.id[i]);
+  S.p4.busy = true; render();
+  try {
+    const r = await fetch(API + '/api/rejudge', {method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({source: src, rule_id: rule, rule_text: text, examples, variant: variantOf(m), tau: D.meta.tau[src], start_level: D.meta.start_level || 2, text_ids: ids, top: TOP})});
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || r.statusText);
+    const E = {id: Date.now(), src, rule, text, exText, examples, variant: variantOf(m), model: m, time: new Date().toLocaleString(), nJudged: j.n_judged,
+      sims: new Map(Object.entries(j.sims).map(([t, v]) => [IDX.get(t), v]).filter(([i]) => i != null)),
+      p: new Map(Object.entries(j.p).map(([t, v]) => [IDX.get(t), v])), extra: new Map(Object.entries(j.extra || {})),
+      pEx: new Map(Object.entries(j.p_example || {}).map(([t, v]) => [IDX.get(t), v]))};   // 예시를 넣은 값은 정답 텍스트 비교에만
+    P4C.clear(); S.p4.edit = E;
+  } catch (e) { alertBox('다시 판정 실패: ' + e.message); }
+  S.p4.busy = false; render();
+}
+async function fillMissing(src) {
+  const m = S.p4.model, B = p4Base(src, m, S.p4.tau ?? D.meta.tau[src], {node: S.p4.bnode, v: S.p4.bv}, null);
+  S.p4.busy = true;
+  try {
+    const r = await fetch(API + '/api/judge_pairs', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({variant: variantOf(m), pairs: B.miss})});
+    const j = await r.json(); if (!r.ok) throw new Error(j.error || r.statusText);
+    const c = D.cache[variantOf(m)] = D.cache[variantOf(m)] || {}; Object.assign(c, j.p); P4C.clear();
+  } catch (e) { alertBox('판정 실패: ' + e.message); }
+  S.p4.busy = false; render();
+}
+async function saveEdit() {
+  const E = S.p4.edit; if (!E) return;
+  const rec = {time: E.time, source: E.src, rule: E.rule, rule_name: nname(E.rule), old_text: NODE.get(E.rule).text, new_text: E.text, examples: E.examples, variant: E.variant,
+    settings: {tau: D.meta.tau[E.src], threshold: thrOf(E.src, E.model, 'base'), threshold_rule: S.thrBy}, metrics: E.summary};
+  const L = proposals(); L.push(rec); saveProposals(L);
+  if (S.server) { try { await fetch(API + '/api/proposals', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(rec)}); } catch (e) {} }
+  render();
+}
+function alertBox(msg) { $('modalBody').innerHTML = `<h2>알림</h2><p>${esc(msg)}</p><button onclick="document.getElementById('modal').classList.remove('on')">닫기</button>`; $('modal').classList.add('on'); }
+
+// ======================================================================= 그리기
+function render() {
+  document.querySelectorAll('.tab').forEach(b => b.classList.toggle('on', b.dataset.t === S.tab));
+  const main = $('main');
+  try {
+    main.innerHTML = {p1: renderP1, p2: renderP2, p3: renderP3, p4: renderP4}[S.tab]();
+    ({p1: bindP1, p2: bindP2, p3: bindP3, p4: bindP4})[S.tab]();
+  } catch (e) { main.innerHTML = `<div class="card warn">그리기 오류: ${esc(e.message)}</div>`; console.error(e); }
+  renderDetail();
+  $('srv').innerHTML = S.server ? '<span class="chip ok">로컬 서버 연결됨 · 다시 판정 가능</span>' : '<span class="chip s">로컬 서버 없음 · 다시 판정 꺼짐</span>';
+}
+async function ping() { try { const r = await fetch(API + '/api/health', {cache: 'no-store'}); S.server = r.ok; } catch (e) { S.server = false; } render(); }
+initFilters(); render(); ping();
+</script>
+</body>
+</html>

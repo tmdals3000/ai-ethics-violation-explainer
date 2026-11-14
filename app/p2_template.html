@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>P2 판정 비교 뷰 · Project 4 데모</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme: light;
+  --paper:#EDF0F3; --surface:#FFFFFF; --sunk:#F5F7F9;
+  --ink:#18202B; --muted:#5E6875; --line:#D3D9DF;
+  --accent:#0B7285; --accent-soft:rgba(11,114,133,.12);
+  --heat:194,65,12;
+  --viol:#B4233C; --safe:#8793A1;
+  --m1:#4C51BF; --m2:#B7791F; --m3:#2F855A;
+  --warn-bg:#FFF4E5; --warn-ink:#7A4A00; --warn-line:#F0C98A;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --paper:#12161C; --surface:#1A2029; --sunk:#151A21;
+    --ink:#E6EAF0; --muted:#9AA5B3; --line:#2C3542;
+    --accent:#3BC0D4; --accent-soft:rgba(59,192,212,.16);
+    --heat:251,128,72;
+    --viol:#F2668B; --safe:#7D8896;
+    --m1:#8D92F5; --m2:#E3B04B; --m3:#5CC99A;
+    --warn-bg:#2B2213; --warn-ink:#F3C77A; --warn-line:#5A4520;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --paper:#12161C; --surface:#1A2029; --sunk:#151A21;
+  --ink:#E6EAF0; --muted:#9AA5B3; --line:#2C3542;
+  --accent:#3BC0D4; --accent-soft:rgba(59,192,212,.16);
+  --heat:251,128,72;
+  --viol:#F2668B; --safe:#7D8896;
+  --m1:#8D92F5; --m2:#E3B04B; --m3:#5CC99A;
+  --warn-bg:#2B2213; --warn-ink:#F3C77A; --warn-line:#5A4520;
+}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font-family:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",system-ui,sans-serif;
+  font-size:14px;line-height:1.5;font-variant-numeric:tabular-nums}
+button,select,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+header{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between;
+  padding:22px 28px 14px;max-width:1440px;margin:0 auto}
+header h1{margin:0;font-size:24px;font-weight:700;letter-spacing:-.01em}
+header p{margin:2px 0 0;color:var(--muted);max-width:68ch}
+.status{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.notice{background:var(--warn-bg);color:var(--warn-ink);border:1px solid var(--warn-line);
+  border-radius:6px;padding:6px 10px;font-size:13px;max-width:60ch}
+.notice.real{background:var(--accent-soft);color:var(--ink);border-color:var(--accent)}
+.btn{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:6px 12px;cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+
+.filters{position:sticky;top:0;z-index:5;background:var(--paper);border-bottom:1px solid var(--line)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--paper)}
+.filters .inner{max-width:1440px;margin:0 auto;padding:10px 28px;display:flex;flex-wrap:wrap;gap:10px 20px;align-items:flex-end}
+.f{display:flex;flex-direction:column;gap:3px}
+.f>span{font-size:12px;color:var(--muted)}
+.f select{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:5px 8px;max-width:240px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--surface)}
+.seg button{border:0;background:transparent;padding:5px 10px;cursor:pointer;border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--surface)}
+.chk{display:inline-flex;gap:10px;flex-wrap:wrap;padding:4px 0}
+.chk label{display:inline-flex;gap:5px;align-items:center;cursor:pointer}
+.sw{display:inline-block;width:10px;height:10px;border-radius:2px}
+.m1{--mc:var(--m1)} .m2{--mc:var(--m2)} .m3{--mc:var(--m3)}
+.sw{background:var(--mc)}
+.range{display:flex;align-items:center;gap:8px}
+.range input{width:120px;accent-color:var(--accent)}
+.range output{min-width:3.2em}
+
+main{max-width:1440px;margin:0 auto;padding:16px 28px 40px;display:grid;gap:16px;
+  grid-template-columns:minmax(0,7fr) minmax(0,5fr)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:16px 18px;min-width:0}
+.panel h2{margin:0;font-size:16px;font-weight:600}
+.panel .sub{margin:2px 0 12px;color:var(--muted);font-size:13px}
+.ph{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.span2{grid-column:1/-1}
+.scroll{overflow-x:auto}
+
+table{border-collapse:collapse;width:100%}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-weight:500;color:var(--muted);font-size:12.5px}
+td.num,th.num{text-align:right}
+.metrics td.model{font-weight:600}
+.metrics td.model .sw{margin-right:6px}
+.kappa{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+.kappa div{background:var(--sunk);border:1px solid var(--line);border-radius:6px;padding:6px 10px;font-size:13px}
+.kappa b{font-size:15px;margin-left:6px}
+
+/* 행렬: 규칙(행) × 모델(열) */
+.matrix th.grp{white-space:normal;min-width:180px;max-width:300px;color:var(--ink);font-weight:500;font-size:13px}
+.matrix th.grp small{display:block;color:var(--muted);font-weight:400;font-size:11.5px}
+.matrix tr.area td,.matrix tr.area th{background:var(--sunk);color:var(--muted);font-size:12px;padding:4px 8px}
+.matrix tr.selrow th.grp{box-shadow:inset 3px 0 0 var(--accent)}
+.cell{display:block;width:100%;min-width:118px;border:1px solid transparent;border-radius:5px;padding:6px 8px;
+  text-align:left;cursor:pointer;background:rgba(var(--heat),var(--a,0));position:relative}
+.cell:hover{border-color:var(--ink)}
+.cell[aria-pressed="true"]{border:2px solid var(--accent);padding:5px 7px}
+.cell .rate{font-size:16px;font-weight:600}
+.cell .cnt{font-size:11.5px;color:var(--muted);display:block}
+.cell.hot,.cell.hot .cnt{color:#fff}
+.cell.low{opacity:.42;background-image:repeating-linear-gradient(135deg,transparent 0 5px,var(--line) 5px 6px)}
+.cell.na{cursor:default;color:var(--muted)}
+.pos{font-size:12px;color:var(--muted)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:12px;color:var(--muted);margin-top:10px}
+.legend .ramp{width:110px;height:10px;border-radius:2px;background:linear-gradient(90deg,rgba(var(--heat),0),rgba(var(--heat),.85))}
+.legend .hatch{width:22px;height:12px;border:1px solid var(--line);opacity:.6;background-image:repeating-linear-gradient(135deg,transparent 0 5px,var(--line) 5px 6px)}
+
+/* 산점도 */
+.pair{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+svg.sc{width:100%;height:auto;display:block;max-width:460px}
+svg.sc .ax{stroke:var(--line)} svg.sc .diag{stroke:var(--muted);stroke-dasharray:4 4}
+svg.sc .thr{stroke:var(--accent);stroke-opacity:.45;stroke-dasharray:2 3}
+svg.sc text{fill:var(--muted);font-size:11px}
+svg.sc circle{cursor:pointer}
+svg.sc .y1{fill:var(--viol)} svg.sc .y0{fill:var(--safe)}
+svg.sc .dim{opacity:.12}
+svg.sc .dis{stroke:var(--ink);stroke-width:.8}
+svg.sc .sel{stroke:var(--accent);stroke-width:3;fill-opacity:1}
+.dlist{margin:10px 0 0;padding:0;list-style:none;font-size:13px}
+.dlist li button{all:unset;cursor:pointer;display:flex;gap:8px;width:100%;padding:4px 6px;border-radius:4px;box-sizing:border-box}
+.dlist li button:hover,.dlist li button[aria-current="true"]{background:var(--accent-soft)}
+.dlist .gap{margin-left:auto;font-weight:600}
+
+/* 텍스트 목록 */
+.tlist{max-height:440px;overflow:auto;border-top:1px solid var(--line)}
+.trow{all:unset;box-sizing:border-box;display:grid;grid-template-columns:minmax(0,1.4fr) 64px repeat(var(--nm),minmax(70px,1fr));
+  gap:8px;align-items:center;width:100%;padding:7px 6px;border-bottom:1px solid var(--line);cursor:pointer}
+.trow:hover{background:var(--sunk)}
+.trow[aria-current="true"]{background:var(--accent-soft);box-shadow:inset 3px 0 0 var(--accent)}
+.trow .id{font-size:12.5px;overflow:hidden;text-overflow:ellipsis}
+.trow .id small{display:block;color:var(--muted)}
+.chip{display:inline-block;font-size:11.5px;border-radius:10px;padding:1px 8px;border:1px solid}
+.chip.v{color:var(--viol);border-color:var(--viol)} .chip.s{color:var(--muted);border-color:var(--line)}
+.pb{position:relative;height:16px;background:var(--sunk);border-radius:3px;font-size:11px}
+.pb i{position:absolute;inset:0 auto 0 0;background:var(--mc);opacity:.75;border-radius:3px}
+.pb u{position:absolute;top:-2px;bottom:-2px;width:1px;background:var(--ink);text-decoration:none}
+.pb span{position:absolute;right:4px;top:0;line-height:16px}
+.pb.wrong{outline:2px solid var(--viol);outline-offset:1px}
+.thead{display:grid;grid-template-columns:minmax(0,1.4fr) 64px repeat(var(--nm),minmax(70px,1fr));gap:8px;padding:6px;font-size:12px;color:var(--muted)}
+.empty{color:var(--muted);padding:18px 4px}
+.more{margin-top:8px}
+
+/* 상세 */
+.meta{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px;margin:0}
+.meta dt{color:var(--muted)} .meta dd{margin:0;overflow-wrap:anywhere}
+.verdicts{margin:14px 0;display:grid;gap:8px}
+.verdict{display:grid;grid-template-columns:130px 1fr 54px;gap:10px;align-items:center;font-size:13px}
+.verdict .ok{color:var(--muted)} .verdict .bad{color:var(--viol);font-weight:600}
+.raw{border:1px solid var(--line);border-radius:6px;background:var(--sunk);padding:10px 12px;margin-top:8px}
+.raw h3{margin:0 0 4px;font-size:12.5px;color:var(--muted);font-weight:500}
+.raw p{margin:0 0 10px;white-space:pre-wrap;overflow-wrap:anywhere;max-height:220px;overflow:auto}
+.raw.hidden p{filter:blur(6px);user-select:none;pointer-events:none}
+.hint{font-size:12.5px;color:var(--muted)}
+
+@media (max-width: 980px){
+  main{grid-template-columns:1fr}
+  header,.filters .inner,main{padding-left:16px;padding-right:16px}
+}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>판정 비교 뷰 (P2)</h1>
+    <p>기준 판정 모델 3종이 서로, 그리고 사람 라벨과 어디서 엇갈리는지 봅니다. 칸을 누르면 그 묶음의 텍스트가, 텍스트를 누르면 모델별 위반 확률이 나옵니다.</p>
+  </div>
+  <div class="status">
+    <div id="notice" class="notice" role="status"></div>
+    <label class="btn primary" for="csv">판정 CSV 불러오기</label>
+    <input id="csv" type="file" accept=".csv" hidden>
+  </div>
+</header>
+
+<div class="filters"><div class="inner" id="filters"></div></div>
+
+<main>
+  <section class="panel span2" aria-labelledby="h-metrics">
+    <div class="ph"><div><h2 id="h-metrics">지표</h2>
+      <p class="sub" id="metrics-sub"></p></div></div>
+    <div class="scroll"><table class="metrics" id="metrics"></table></div>
+    <div class="kappa" id="kappa"></div>
+  </section>
+
+  <section class="panel" aria-labelledby="h-matrix">
+    <div class="ph">
+      <div><h2 id="h-matrix">묶음별 잘못된 판정 비율</h2>
+        <p class="sub">칸의 진하기는 잘못된 판정 비율, 아래 숫자는 오판 건수와 전체 건수입니다.</p></div>
+      <div class="f"><span>묶음 기준</span><div class="seg" id="groupby"></div></div>
+    </div>
+    <div class="scroll"><table class="matrix" id="matrix"></table></div>
+    <div class="legend">
+      <span>오판율 0%</span><span class="ramp"></span><span id="legend-max"></span>
+      <span class="hatch"></span><span id="legend-low"></span>
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="h-pair">
+    <h2 id="h-pair">두 모델 비교</h2>
+    <p class="sub">대각선에서 멀수록 두 모델의 판단이 엇갈린 텍스트입니다. 점선은 판정 임계값입니다.</p>
+    <div class="pair" id="pair"></div>
+    <div id="scatter"></div>
+    <ul class="dlist" id="dlist"></ul>
+  </section>
+
+  <section class="panel" aria-labelledby="h-list">
+    <div class="ph"><div><h2 id="h-list">텍스트 목록</h2><p class="sub" id="list-sub"></p></div></div>
+    <div id="list"></div>
+  </section>
+
+  <section class="panel" aria-labelledby="h-detail">
+    <h2 id="h-detail">텍스트 상세</h2>
+    <div id="detail"></div>
+  </section>
+</main>
+
+<script>
+const D = /*__DATA__*/null;
+
+const MODELS = [
+  {k:'llamaguard',  name:'Llama Guard 3 1B',     short:'Llama Guard', cls:'m1', rule:false},
+  {k:'qwen3guard',  name:'Qwen3Guard-Gen-0.6B',  short:'Qwen3Guard',  cls:'m2', rule:false},
+  {k:'shieldgemma', name:'ShieldGemma-2B',       short:'ShieldGemma', cls:'m3', rule:true},
+];
+const SOURCES = {dna:'Do-Not-Answer', jigsaw:'Jigsaw', prosocial:'ProsocialDialog'};
+const RA_KO = {
+  'Discrimination, Exclusion, Toxicity, Hateful, Offensive':'차별·배제·혐오·공격',
+  'Human-Chatbot Interaction Harms':'사람-챗봇 상호작용 위해',
+  'Information Hazards':'정보 위해',
+  'Malicious Uses':'악의적 사용',
+  'Misinformation Harms':'오정보 위해',
+};
+const TH_KO = {
+  'Adult Content':'성인 콘텐츠',
+  'Social stereotypes and unfair discrimination':'사회적 고정관념·부당한 차별',
+  'Toxic language (hate speech)':'유해 언어(혐오 표현)',
+  'Mental Health or Overreliance Crisis':'정신 건강·과의존 위기',
+  'Treat Chatbot as a Human':'챗봇을 사람처럼 대함',
+  'Compromise privacy by leaking or inferring private information (person/individual)':'개인 정보 유출·추론',
+  'Risks from leaking or inferring sensitive information (organization/gov)':'기관·정부 민감 정보 유출·추론',
+  'Assisting illegal activities':'불법 행위 지원',
+  'Nudging or advising users to perform unethical or unsafe actions':'비윤리·위험 행동 유도',
+  'Reducing the cost of disinformation campaigns':'허위 정보 캠페인 비용 절감',
+  'Causing material harm by disseminating misinformation e.g. in medicine or law':'의료·법률 오정보로 실질적 피해',
+  'Disseminating false or misleading information':'거짓·오도 정보 유포',
+};
+const GROUPS = [
+  {k:'types_of_harm', label:'위해 유형 (12)'},
+  {k:'risk_area',     label:'위험 영역 (5)'},
+  {k:'responder',     label:'응답 LLM'},
+  {k:'source',        label:'출처'},
+];
+
+const N = D.n;
+const S = {
+  src:'all', split:'all', ra:'all', th:'all', result:'all',
+  models:new Set(MODELS.map(m=>m.k)), thr:0.5, minN:20,
+  group:'types_of_harm', cell:null, pairA:'llamaguard', pairB:'shieldgemma',
+  sel:null, reveal:false, limit:60,
+};
+const DEFAULTS = JSON.parse(JSON.stringify({...S, models:[...S.models]}));
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pct = v => v==null || isNaN(v) ? '—' : (v*100).toFixed(1)+'%';
+const f3 = v => v==null || isNaN(v) ? '—' : v.toFixed(3);
+const val = (col,i) => D[col+'_dict'][D[col][i]];
+const raName = s => RA_KO[s] || s;
+const thName = s => TH_KO[s] || s;
+const P = (m,i) => D.p[m] ? D.p[m][i] : null;
+const pred = (m,i) => { const p = P(m,i); return p==null ? null : (p >= S.thr ? 1 : 0); };
+const activeModels = () => MODELS.filter(m => S.models.has(m.k));
+
+function groupOf(i){
+  if (S.group==='source') return SOURCES[val('source',i)] || val('source',i);
+  return val(S.group, i);
+}
+function groupLabel(g){
+  if (S.group==='types_of_harm') return thName(g);
+  if (S.group==='risk_area') return raName(g);
+  return g;
+}
+
+/* ---------- 공통 필터 ---------- */
+function filtered(){
+  const am = activeModels(), out = [];
+  for (let i=0;i<N;i++){
+    if (S.src!=='all' && val('source',i)!==S.src) continue;
+    if (S.split!=='all' && val('split',i)!==S.split) continue;
+    if (S.ra!=='all' && val('risk_area',i)!==S.ra) continue;
+    if (S.th!=='all' && val('types_of_harm',i)!==S.th) continue;
+    if (S.result!=='all'){
+      let wrong=false;
+      for (const m of am){ const pr=pred(m.k,i); if (pr!=null && pr!==D.y[i]){ wrong=true; break; } }
+      if (S.result==='wrong' && !wrong) continue;
+      if (S.result==='correct' && wrong) continue;
+    }
+    out.push(i);
+  }
+  return out;
+}
+
+/* ---------- 지표 (scikit-learn과 같은 정의) ---------- */
+function rocAuc(s, y){
+  const n=s.length, pos=y.reduce((a,b)=>a+b,0), neg=n-pos;
+  if (!pos || !neg) return NaN;
+  const idx=[...s.keys()].sort((a,b)=>s[a]-s[b]);
+  let rankSum=0, k=0;
+  while (k<n){ let j=k; while (j+1<n && s[idx[j+1]]===s[idx[k]]) j++;
+    const r=(k+j)/2+1; for (let t=k;t<=j;t++) if (y[idx[t]]) rankSum+=r; k=j+1; }
+  return (rankSum - pos*(pos+1)/2)/(pos*neg);
+}
+function avgPrecision(s, y){
+  const pos=y.reduce((a,b)=>a+b,0); if (!pos) return NaN;
+  const idx=[...s.keys()].sort((a,b)=>s[b]-s[a]);
+  let tp=0, fp=0, prevTp=0, ap=0, k=0;
+  while (k<idx.length){ let j=k; while (j+1<idx.length && s[idx[j+1]]===s[idx[k]]) j++;
+    for (let t=k;t<=j;t++) y[idx[t]] ? tp++ : fp++;
+    ap += (tp/(tp+fp))*((tp-prevTp)/pos); prevTp=tp; k=j+1; }
+  return ap;
+}
+function f1(pr, y){ let tp=0,fp=0,fn=0; for (let i=0;i<y.length;i++){ if(pr[i]&&y[i])tp++; else if(pr[i])fp++; else if(y[i])fn++; }
+  return tp ? 2*tp/(2*tp+fp+fn) : 0; }
+function kappa(a, b){ const n=a.length; if(!n) return NaN; let agree=0,a1=0,b1=0;
+  for (let i=0;i<n;i++){ if(a[i]===b[i])agree++; a1+=a[i]; b1+=b[i]; }
+  const po=agree/n, pe=(a1/n)*(b1/n)+(1-a1/n)*(1-b1/n); return pe===1 ? NaN : (po-pe)/(1-pe); }
+
+/* ---------- 렌더링 ---------- */
+function renderNotice(){
+  const el=$('notice');
+  if (D.mock){ el.className='notice';
+    el.textContent='지금 보이는 위반 확률은 화면 시연용 가상값입니다. 텍스트와 사람 라벨은 실제 Do-Not-Answer 데이터입니다. run_baselines.py 결과 CSV를 불러오면 실제 판정값으로 바뀝니다.'; }
+  else { el.className='notice real'; el.textContent='판정값: '+D.judgmentsFile; }
+}
+
+function renderFilters(){
+  const srcs=[...new Set(D.source_dict)];
+  const ras=D.risk_area_dict, ths=D.types_of_harm_dict.filter(t => S.ra==='all' ||
+    [...Array(N).keys()].some(i => val('types_of_harm',i)===t && val('risk_area',i)===S.ra));
+  const opt=(v,l,cur,dis)=>`<option value="${esc(v)}"${v===cur?' selected':''}${dis?' disabled':''}>${esc(l)}</option>`;
+  $('filters').innerHTML = `
+    <label class="f"><span>출처</span><select id="f-src">${opt('all','전체',S.src)}
+      ${Object.entries(SOURCES).map(([k,l])=>opt(k, l+(srcs.includes(k)?'':' (아직 없음)'), S.src, !srcs.includes(k))).join('')}</select></label>
+    <div class="f"><span>분할</span><div class="seg" data-k="split">
+      ${['all','dev','test'].map(v=>`<button type="button" data-v="${v}" aria-pressed="${S.split===v}">${v==='all'?'전체':v}</button>`).join('')}</div></div>
+    <label class="f"><span>규칙: 위험 영역</span><select id="f-ra">${opt('all','전체',S.ra)}${ras.map(r=>opt(r,raName(r),S.ra)).join('')}</select></label>
+    <label class="f"><span>규칙: 위해 유형</span><select id="f-th">${opt('all','전체',S.th)}${ths.map(t=>opt(t,thName(t),S.th)).join('')}</select></label>
+    <div class="f"><span>판정 모델</span><div class="chk">${MODELS.map(m=>`<label class="${m.cls}"><input type="checkbox" data-m="${m.k}"${S.models.has(m.k)?' checked':''}><span class="sw"></span>${esc(m.name)}</label>`).join('')}</div></div>
+    <div class="f"><span>판정 결과 (선택 모델 기준)</span><div class="seg" data-k="result">
+      ${[['all','전체'],['correct','모두 맞음'],['wrong','하나라도 틀림']].map(([v,l])=>`<button type="button" data-v="${v}" aria-pressed="${S.result===v}">${l}</button>`).join('')}</div></div>
+    <div class="f"><span>판정 임계값</span><div class="range"><input id="f-thr" type="range" min="0.05" max="0.95" step="0.05" value="${S.thr}"><output>${S.thr.toFixed(2)}</output></div></div>
+    <div class="f"><span>흐리게 표시할 건수 기준</span><div class="range"><input id="f-minn" type="range" min="0" max="100" step="5" value="${S.minN}"><output>${S.minN}건 미만</output></div></div>
+    <button class="btn" id="f-reset" type="button">필터 초기화</button>`;
+}
+
+function renderMetrics(rows){
+  const am=activeModels();
+  const pos=rows.reduce((a,i)=>a+D.y[i],0);
+  $('metrics-sub').textContent = `필터를 통과한 텍스트 ${rows.length.toLocaleString()}건, 사람 라벨 위반 ${pos}건 (${pct(rows.length?pos/rows.length:NaN)}). 위반이 드물어 PR-AUC를 함께 봅니다. 임계값 ${S.thr.toFixed(2)}에서 F1과 κ를 계산했습니다.`;
+  let h=`<thead><tr><th>판정 모델</th><th>규칙 문장 입력</th><th class="num">ROC-AUC</th><th class="num">PR-AUC</th><th class="num">F1 (위반)</th><th class="num">사람 라벨과 κ</th><th class="num">위반 판정 비율</th><th class="num">판정 건수</th></tr></thead><tbody>`;
+  for (const m of am){
+    const ii=rows.filter(i=>P(m.k,i)!=null), s=ii.map(i=>P(m.k,i)), y=ii.map(i=>D.y[i]), pr=ii.map(i=>pred(m.k,i));
+    h+=`<tr class="${m.cls}"><td class="model"><span class="sw"></span>${esc(m.name)}</td><td>${m.rule?'받음':'받지 않음'}</td>
+      <td class="num">${f3(rocAuc(s,y))}</td><td class="num">${f3(avgPrecision(s,y))}</td><td class="num">${f3(f1(pr,y))}</td>
+      <td class="num">${f3(kappa(pr,y))}</td><td class="num">${pct(ii.length?pr.reduce((a,b)=>a+b,0)/ii.length:NaN)}</td><td class="num">${ii.length.toLocaleString()}</td></tr>`;
+  }
+  $('metrics').innerHTML = am.length ? h+'</tbody>' : '<tbody><tr><td class="empty">판정 모델을 하나 이상 고르세요.</td></tr></tbody>';
+  let k='';
+  for (let a=0;a<am.length;a++) for (let b=a+1;b<am.length;b++){
+    const ii=rows.filter(i=>P(am[a].k,i)!=null && P(am[b].k,i)!=null);
+    k+=`<div>${esc(am[a].name)} ↔ ${esc(am[b].name)}<b>κ ${f3(kappa(ii.map(i=>pred(am[a].k,i)), ii.map(i=>pred(am[b].k,i))))}</b></div>`;
+  }
+  $('kappa').innerHTML = k ? k + `<div class="hint" style="background:none;border:0">팀 판정기가 들어오면 6쌍이 됩니다.</div>` : '';
+}
+
+function groupOrder(rows){
+  const set=new Map();
+  for (const i of rows){ const g=groupOf(i); if(!set.has(g)) set.set(g, val('risk_area',i)); }
+  let gs=[...set.keys()];
+  if (S.group==='types_of_harm') gs.sort((a,b)=> set.get(a).localeCompare(set.get(b)) || a.localeCompare(b));
+  else gs.sort();
+  return gs.map(g=>({g, area:set.get(g)}));
+}
+
+function renderMatrix(rows){
+  $('groupby').innerHTML = GROUPS.map(g=>`<button type="button" data-g="${g.k}" aria-pressed="${S.group===g.k}">${g.label}</button>`).join('');
+  const am=activeModels(), byG=new Map();
+  for (const i of rows){ const g=groupOf(i); if(!byG.has(g)) byG.set(g,[]); byG.get(g).push(i); }
+  const order=groupOrder(rows);
+  const stat=(m,ii)=>{ let n=0,w=0; for(const i of ii){ const pr=pred(m,i); if(pr==null)continue; n++; if(pr!==D.y[i]) w++; } return {n,w,r:n?w/n:NaN}; };
+  let maxR=0; for (const {g} of order) for (const m of am){ const s=stat(m.k,byG.get(g)); if(s.n>=S.minN && s.r>maxR) maxR=s.r; }
+  maxR = maxR || 0.01;
+  const selG = S.sel!=null ? groupOf(S.sel) : null;
+  let h=`<thead><tr><th>${GROUPS.find(g=>g.k===S.group).label.replace(/ \(\d+\)/,'')}</th><th class="num">사람 라벨 위반</th>${am.map(m=>`<th class="${m.cls}"><span class="sw"></span> ${esc(m.name)}</th>`).join('')}</tr></thead><tbody>`;
+  let lastArea=null;
+  for (const {g,area} of order){
+    if (S.group==='types_of_harm' && area!==lastArea){ h+=`<tr class="area"><th colspan="${2+am.length}">${esc(raName(area))}</th></tr>`; lastArea=area; }
+    const ii=byG.get(g), pos=ii.reduce((a,i)=>a+D.y[i],0);
+    h+=`<tr class="${g===selG?'selrow':''}"><th class="grp" title="${esc(g)}">${esc(groupLabel(g))}${groupLabel(g)!==g?`<small>${esc(g)}</small>`:''}</th>
+      <td class="num pos">${pos} / ${ii.length}</td>`;
+    for (const m of am){
+      const s=stat(m.k,ii), low=s.n<S.minN;
+      if (!s.n){ h+=`<td><span class="cell na">판정 없음</span></td>`; continue; }
+      const on = S.cell && S.cell.m===m.k && S.cell.g===g;
+      const a=Math.min(s.r/maxR,1)*.85;
+      h+=`<td><button type="button" class="cell${low?' low':''}${a>.55&&!low?' hot':''}" style="--a:${a.toFixed(3)}"
+        data-m="${m.k}" data-g="${esc(g)}" aria-pressed="${on}" aria-label="${esc(m.name)}, ${esc(groupLabel(g))}, 오판율 ${pct(s.r)}, ${s.w}건 / ${s.n}건">
+        <span class="rate">${pct(s.r)}</span><span class="cnt">오판 ${s.w} / ${s.n}건${low?' · 건수 적음':''}</span></button></td>`;
+    }
+    h+='</tr>';
+  }
+  $('matrix').innerHTML = am.length ? h+'</tbody>' : '<tbody><tr><td class="empty">판정 모델을 하나 이상 고르세요.</td></tr></tbody>';
+  $('legend-max').textContent = pct(maxR)+' (건수 기준 이상 칸 중 최대)';
+  $('legend-low').textContent = S.minN+'건 미만 칸은 흐리게 표시';
+}
+
+function renderPair(rows){
+  const am=activeModels();
+  if (am.length<2){ $('pair').innerHTML=''; $('scatter').innerHTML='<p class="empty">판정 모델을 두 개 이상 고르세요.</p>'; $('dlist').innerHTML=''; return; }
+  if (!S.models.has(S.pairA)) S.pairA=am[0].k;
+  if (!S.models.has(S.pairB) || S.pairB===S.pairA) S.pairB=am.find(m=>m.k!==S.pairA).k;
+  const sel=(id,cur)=>`<select id="${id}">${am.map(m=>`<option value="${m.k}"${m.k===cur?' selected':''}>${esc(m.name)}</option>`).join('')}</select>`;
+  $('pair').innerHTML = `<label class="f"><span>가로축</span>${sel('pa',S.pairA)}</label><label class="f"><span>세로축</span>${sel('pb',S.pairB)}</label>
+    <span class="hint">빨간 점은 사람 라벨 위반, 테두리 점은 임계값 기준 판정이 다른 텍스트</span>`;
+  const A=S.pairA, B=S.pairB, W=420, M=38, iw=W-M-12;
+  const x=v=>M+v*iw, y=v=>W-M-v*iw;
+  const inCell = S.cell ? new Set(rows.filter(i=>groupOf(i)===S.cell.g)) : null;
+  const pts=rows.filter(i=>P(A,i)!=null && P(B,i)!=null);
+  pts.sort((a,b)=>D.y[a]-D.y[b]);
+  let c='';
+  for (const i of pts){
+    const dis = pred(A,i)!==pred(B,i);
+    const cls=`y${D.y[i]}${dis?' dis':''}${inCell && !inCell.has(i)?' dim':''}`;
+    c+=`<circle data-i="${i}" class="${cls}" cx="${x(P(A,i)).toFixed(1)}" cy="${y(P(B,i)).toFixed(1)}" r="${dis?3.4:2.2}" fill-opacity=".6"><title>${esc(D.text_id[i])}</title></circle>`;
+  }
+  if (S.sel!=null && P(A,S.sel)!=null && P(B,S.sel)!=null)
+    c+=`<circle data-i="${S.sel}" class="sel y${D.y[S.sel]}" cx="${x(P(A,S.sel))}" cy="${y(P(B,S.sel))}" r="7"/>`;
+  const ticks=[0,.25,.5,.75,1].map(t=>`<text x="${x(t)}" y="${W-M+16}" text-anchor="middle">${t}</text><text x="${M-6}" y="${y(t)+4}" text-anchor="end">${t}</text>`).join('');
+  const nm=k=>MODELS.find(m=>m.k===k).name;
+  $('scatter').innerHTML = `<svg class="sc" viewBox="0 0 ${W} ${W}" role="img" aria-label="${esc(nm(A))}와 ${esc(nm(B))}의 위반 확률 산점도">
+    <rect class="ax" x="${M}" y="${W-M-iw}" width="${iw}" height="${iw}" fill="none"/>
+    <line class="diag" x1="${x(0)}" y1="${y(0)}" x2="${x(1)}" y2="${y(1)}"/>
+    <line class="thr" x1="${x(S.thr)}" y1="${y(0)}" x2="${x(S.thr)}" y2="${y(1)}"/><line class="thr" x1="${x(0)}" y1="${y(S.thr)}" x2="${x(1)}" y2="${y(S.thr)}"/>
+    ${ticks}<text x="${x(.5)}" y="${W-4}" text-anchor="middle">${esc(nm(A))} 위반 확률</text>
+    <text transform="translate(11 ${y(.5)}) rotate(-90)" text-anchor="middle">${esc(nm(B))} 위반 확률</text>${c}</svg>`;
+  const top=[...pts].filter(i=>!inCell||inCell.has(i)).sort((a,b)=>Math.abs(P(B,b)-P(A,b))-Math.abs(P(B,a)-P(A,a))).slice(0,8);
+  $('dlist').innerHTML = `<li class="hint">판단 차이가 가장 큰 텍스트${inCell?' (선택한 칸 안에서)':''}</li>` + top.map(i=>`<li><button type="button" data-i="${i}" aria-current="${i===S.sel}">
+    <span>${esc(D.text_id[i])}</span><span class="chip ${D.y[i]?'v':'s'}">${D.y[i]?'위반':'정상'}</span>
+    <span class="gap">${P(A,i).toFixed(2)} vs ${P(B,i).toFixed(2)}</span></button></li>`).join('');
+}
+
+function probBar(m,i){
+  const p=P(m.k,i); if (p==null) return `<div class="pb"><span>—</span></div>`;
+  const wrong=pred(m.k,i)!==D.y[i];
+  return `<div class="pb ${m.cls}${wrong?' wrong':''}" title="${esc(m.name)} ${p.toFixed(3)}${wrong?' (틀림)':''}"><i style="width:${(p*100).toFixed(1)}%"></i><u style="left:${S.thr*100}%"></u><span>${p.toFixed(2)}</span></div>`;
+}
+
+function renderList(rows){
+  const am=activeModels();
+  if (!S.cell){ $('list-sub').textContent='행렬 칸을 누르면 그 칸의 텍스트가 여기 나옵니다.'; $('list').innerHTML=''; return; }
+  const m=MODELS.find(x=>x.k===S.cell.m);
+  let ii=rows.filter(i=>groupOf(i)===S.cell.g && P(m.k,i)!=null);
+  ii.sort((a,b)=>{ const wa=pred(m.k,a)!==D.y[a], wb=pred(m.k,b)!==D.y[b]; if(wa!==wb) return wb-wa;
+    return Math.abs(P(m.k,b)-D.y[b])-Math.abs(P(m.k,a)-D.y[a]); });
+  const wrongN=ii.filter(i=>pred(m.k,i)!==D.y[i]).length;
+  $('list-sub').textContent=`${groupLabel(S.cell.g)} × ${m.name}: ${ii.length}건 중 오판 ${wrongN}건. 이 모델이 틀린 텍스트가 위에 옵니다. 빨간 테두리는 틀린 판정입니다.`;
+  const shown=ii.slice(0,S.limit);
+  $('list').innerHTML = `<div class="thead" style="--nm:${am.length}"><span>텍스트</span><span>사람 라벨</span>${am.map(x=>`<span class="${x.cls}"><span class="sw"></span> ${esc(x.short)}</span>`).join('')}</div>
+    <div class="tlist">${shown.map(i=>`<button type="button" class="trow" style="--nm:${am.length}" data-i="${i}" aria-current="${i===S.sel}">
+      <span class="id">${esc(D.text_id[i])}<small>${esc(val('responder',i))} 응답, ${esc(val('split',i))}</small></span>
+      <span><span class="chip ${D.y[i]?'v':'s'}">${D.y[i]?'위반':'정상'}</span></span>
+      ${am.map(x=>probBar(x,i)).join('')}</button>`).join('') || '<p class="empty">조건에 맞는 텍스트가 없습니다.</p>'}</div>
+    ${ii.length>S.limit?`<button class="btn more" id="more" type="button">${Math.min(60,ii.length-S.limit)}건 더 보기 (${S.limit}/${ii.length})</button>`:''}`;
+}
+
+function renderDetail(){
+  const i=S.sel, el=$('detail');
+  if (i==null){ el.innerHTML='<p class="empty">목록, 산점도, 차이 목록에서 텍스트를 누르면 규칙 경로와 모델별 위반 확률이 여기 나옵니다.</p>'; return; }
+  const sh=val('specific_harms',i);
+  el.innerHTML = `<dl class="meta">
+      <dt>텍스트</dt><dd>${esc(D.text_id[i])}</dd>
+      <dt>출처, 분할</dt><dd>${esc(SOURCES[val('source',i)]||val('source',i))}, ${esc(val('split',i))}</dd>
+      <dt>응답 LLM</dt><dd>${esc(val('responder',i))}</dd>
+      <dt>정답 규칙 경로</dt><dd>${esc(raName(val('risk_area',i)))} › ${esc(thName(val('types_of_harm',i)))} › ${esc(sh.split(':')[0])}</dd>
+      <dt>사람 라벨</dt><dd><span class="chip ${D.y[i]?'v':'s'}">${D.y[i]?'위반 (harmful)':'정상'}</span></dd>
+    </dl>
+    <div class="verdicts">${MODELS.map(m=>{ const p=P(m.k,i), pr=pred(m.k,i);
+      return `<div class="verdict ${m.cls}"><span><span class="sw"></span> ${esc(m.name)}</span>${probBar(m,i)}
+        <span class="${pr==null?'ok':(pr!==D.y[i]?'bad':'ok')}">${pr==null?'없음':(pr!==D.y[i]?'틀림':'맞음')}</span></div>`; }).join('')}
+      <p class="hint" style="margin:0">ShieldGemma는 정답 규칙 문장(규칙 문장만 조건)을 넣은 값, 나머지 두 모델은 규칙 문장 없이 자체 범주로 판정한 값입니다.</p>
+    </div>
+    <button class="btn" id="reveal" type="button" aria-expanded="${S.reveal}">${S.reveal?'원문 가리기':'원문 보기 (유해할 수 있음)'}</button>
+    <div class="raw ${S.reveal?'':'hidden'}" aria-hidden="${!S.reveal}">
+      <h3>맥락: 사용자 질문</h3><p>${S.reveal?esc(val('question',i)):'가려진 텍스트입니다'}</p>
+      <h3>판정 대상: ${esc(val('responder',i))} 응답</h3><p>${S.reveal?esc(D.response[i]):'가려진 텍스트입니다'}</p>
+      <h3>정답 규칙 문장</h3><p>${esc(sh)}</p>
+    </div>`;
+}
+
+function render(){
+  const rows=filtered();
+  if (S.sel!=null && !rows.includes(S.sel)) { S.sel=null; S.reveal=false; }
+  renderNotice(); renderMetrics(rows); renderMatrix(rows); renderPair(rows); renderList(rows); renderDetail();
+}
+function select(i){ if (S.sel!==i){ S.sel=i; S.reveal=false; } render(); }
+
+/* ---------- 이벤트 ---------- */
+document.addEventListener('change', e=>{
+  const t=e.target;
+  if (t.id==='f-src'){ S.src=t.value; }
+  else if (t.id==='f-ra'){ S.ra=t.value; S.th='all'; S.cell=null; renderFilters(); }
+  else if (t.id==='f-th'){ S.th=t.value; S.cell=null; }
+  else if (t.dataset.m){ t.checked ? S.models.add(t.dataset.m) : S.models.delete(t.dataset.m); if (S.cell && !S.models.has(S.cell.m)) S.cell=null; }
+  else if (t.id==='pa'){ S.pairA=t.value; if (S.pairB===S.pairA) S.pairB=activeModels().find(m=>m.k!==S.pairA).k; }
+  else if (t.id==='pb'){ S.pairB=t.value; if (S.pairB===S.pairA) S.pairA=activeModels().find(m=>m.k!==S.pairB).k; }
+  else if (t.id==='csv'){ loadCsv(t.files[0]); t.value=''; return; }
+  else return;
+  render();
+});
+document.addEventListener('input', e=>{
+  const t=e.target;
+  if (t.id==='f-thr'){ S.thr=+t.value; t.nextElementSibling.textContent=S.thr.toFixed(2); }
+  else if (t.id==='f-minn'){ S.minN=+t.value; t.nextElementSibling.textContent=S.minN+'건 미만'; }
+  else return;
+  render();
+});
+document.addEventListener('click', e=>{
+  const b=e.target.closest('button, circle'); if (!b) return;
+  const seg=b.closest('.seg');
+  if (seg && seg.dataset.k){ S[seg.dataset.k]=b.dataset.v; S.cell=null; renderFilters(); render(); return; }
+  if (b.dataset.g && b.closest('#groupby')){ S.group=b.dataset.g; S.cell=null; render(); return; }
+  if (b.classList.contains('cell') && b.dataset.m){ const same=S.cell && S.cell.m===b.dataset.m && S.cell.g===b.dataset.g;
+    S.cell = same ? null : {m:b.dataset.m, g:b.dataset.g}; S.limit=60; render(); return; }
+  if (b.id==='more'){ S.limit+=60; render(); return; }
+  if (b.id==='reveal'){ S.reveal=!S.reveal; renderDetail(); return; }
+  if (b.id==='f-reset'){ Object.assign(S, JSON.parse(JSON.stringify(DEFAULTS)), {models:new Set(DEFAULTS.models)}); renderFilters(); render(); return; }
+  if (b.dataset.i!=null) select(+b.dataset.i);
+});
+
+/* ---------- 판정 CSV 불러오기: text_id, model, p_violation[, condition] ---------- */
+function parseCsv(text){
+  const rows=[]; let row=[], f='', q=false;
+  for (let k=0;k<text.length;k++){ const c=text[k];
+    if (q){ if (c==='"'){ if (text[k+1]==='"'){ f+='"'; k++; } else q=false; } else f+=c; }
+    else if (c==='"') q=true; else if (c===','){ row.push(f); f=''; }
+    else if (c==='\n'){ row.push(f.replace(/\r$/,'')); rows.push(row); row=[]; f=''; } else f+=c; }
+  if (f||row.length){ row.push(f); rows.push(row); }
+  return rows;
+}
+function loadCsv(file){
+  if (!file) return;
+  const r=new FileReader();
+  r.onload=()=>{
+    const rows=parseCsv(r.result), head=rows.shift().map(s=>s.trim());
+    const ci=head.indexOf('text_id'), cm=head.indexOf('model'), cp=head.indexOf('p_violation');
+    if (ci<0||cm<0||cp<0){ alert('text_id, model, p_violation 컬럼이 있는 CSV를 골라 주세요.'); return; }
+    const idx=new Map(D.text_id.map((t,i)=>[t,i])), fresh={}; let hit=0, miss=0;
+    for (const row of rows){ if (row.length<head.length) continue;
+      const m=row[cm].trim(), i=idx.get(row[ci].trim()), p=parseFloat(row[cp]);
+      if (!MODELS.some(x=>x.k===m)) continue;
+      if (i==null){ miss++; continue; }
+      (fresh[m] ||= new Array(N).fill(null))[i] = isNaN(p) ? null : p; hit++; }
+    if (!hit){ alert('이 데이터의 text_id와 맞는 행이 없습니다. text_id 규칙을 확인해 주세요.'); return; }
+    Object.assign(D.p, fresh); D.mock=false; D.judgmentsFile=`${file.name} (${Object.keys(fresh).join(', ')} 교체, ${hit.toLocaleString()}행${miss?`, 맞지 않는 id ${miss}행`:''})`;
+    render();
+  };
+  r.readAsText(file);
+}
+
+renderFilters(); render();
+</script>
+</body>
+</html>

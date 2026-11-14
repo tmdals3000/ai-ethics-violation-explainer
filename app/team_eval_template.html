@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>팀 판정기 성능 판별 · Project 4 데모</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme: light;
+  --paper:#EDF0F3; --surface:#FFFFFF; --sunk:#F5F7F9;
+  --ink:#18202B; --muted:#5E6875; --line:#D3D9DF;
+  --accent:#0B7285; --accent-soft:rgba(11,114,133,.12);
+  --viol:#B4233C; --safe:#8793A1; --good:#2B8A3E; --good-soft:rgba(43,138,62,.14); --bad-soft:rgba(180,35,60,.12);
+  --b1:#9AA3B5; --b2:#B59A6A; --b3:#4A5566;
+  --t0:#8C99AE; --t1:#0B7285; --t2:#7048E8; --t3:#E8590C;
+  --warn-bg:#FFF4E5; --warn-ink:#7A4A00; --warn-line:#F0C98A;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --paper:#12161C; --surface:#1A2029; --sunk:#151A21;
+    --ink:#E6EAF0; --muted:#9AA5B3; --line:#2C3542;
+    --accent:#3BC0D4; --accent-soft:rgba(59,192,212,.16);
+    --viol:#F2668B; --safe:#7D8896; --good:#69DB7C; --good-soft:rgba(105,219,124,.14); --bad-soft:rgba(242,102,139,.14);
+    --b1:#7D879A; --b2:#A18A60; --b3:#B8C2D0;
+    --t0:#8592A6; --t1:#3BC0D4; --t2:#9775FA; --t3:#FF922B;
+    --warn-bg:#2B2213; --warn-ink:#F3C77A; --warn-line:#5A4520;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --paper:#12161C; --surface:#1A2029; --sunk:#151A21;
+  --ink:#E6EAF0; --muted:#9AA5B3; --line:#2C3542;
+  --accent:#3BC0D4; --accent-soft:rgba(59,192,212,.16);
+  --viol:#F2668B; --safe:#7D8896; --good:#69DB7C; --good-soft:rgba(105,219,124,.14); --bad-soft:rgba(242,102,139,.14);
+  --b1:#7D879A; --b2:#A18A60; --b3:#B8C2D0;
+  --t0:#8592A6; --t1:#3BC0D4; --t2:#9775FA; --t3:#FF922B;
+  --warn-bg:#2B2213; --warn-ink:#F3C77A; --warn-line:#5A4520;
+}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font-family:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",system-ui,sans-serif;
+  font-size:14px;line-height:1.5;font-variant-numeric:tabular-nums}
+button,select,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+header{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between;
+  padding:22px 28px 14px;max-width:1440px;margin:0 auto}
+header h1{margin:0;font-size:24px;font-weight:700;letter-spacing:-.01em}
+header p{margin:2px 0 0;color:var(--muted);max-width:70ch}
+.status{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.notice{background:var(--warn-bg);color:var(--warn-ink);border:1px solid var(--warn-line);border-radius:6px;padding:6px 10px;font-size:13px;max-width:62ch}
+.notice.real{background:var(--accent-soft);color:var(--ink);border-color:var(--accent)}
+.btn{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:6px 12px;cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+.filters{position:sticky;top:0;z-index:5;background:var(--paper);border-bottom:1px solid var(--line)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--paper)}
+.filters .inner{max-width:1440px;margin:0 auto;padding:10px 28px;display:flex;flex-wrap:wrap;gap:10px 20px;align-items:flex-end}
+.f{display:flex;flex-direction:column;gap:3px}
+.f>span{font-size:12px;color:var(--muted)}
+.f select{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:5px 8px;max-width:240px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--surface)}
+.seg button{border:0;background:transparent;padding:5px 10px;cursor:pointer;border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--surface)}
+.seg button:disabled{color:var(--muted);cursor:not-allowed}
+.inline{display:inline-flex;gap:6px;align-items:center;cursor:pointer;font-size:13px}
+.range{display:flex;align-items:center;gap:8px}
+.range input{width:130px;accent-color:var(--accent)}
+main{max-width:1440px;margin:0 auto;padding:16px 28px 40px;display:grid;gap:16px;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:16px 18px;min-width:0}
+.panel h2{margin:0;font-size:16px;font-weight:600}
+.panel .sub{margin:2px 0 12px;color:var(--muted);font-size:13px}
+.ph{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.span2{grid-column:1/-1}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-weight:500;color:var(--muted);font-size:12.5px}
+td.num,th.num{text-align:right}
+.sw{display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--mc);margin-right:6px;vertical-align:baseline}
+.board tbody tr{cursor:pointer}
+.board tbody tr:hover{background:var(--sunk)}
+.board tr.target{box-shadow:inset 3px 0 0 var(--accent);background:var(--accent-soft)}
+.board tr.ref td.name::after{content:"기준";font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:8px;padding:0 6px;margin-left:6px}
+.board .name{font-weight:600}
+.board .desc{color:var(--muted);font-size:12.5px;white-space:normal;min-width:180px}
+.ci{color:var(--muted);font-size:11.5px;display:block}
+.best{font-weight:700;color:var(--accent)}
+.delta.up{color:var(--good)} .delta.down{color:var(--viol)}
+.kind{font-size:11.5px;border-radius:8px;padding:1px 7px;border:1px solid var(--line);color:var(--muted)}
+.kind.team{border-color:var(--accent);color:var(--accent)}
+.note{font-size:12.5px;color:var(--muted);margin:10px 0 0}
+svg.ch{width:100%;height:auto;display:block}
+svg.ch .ax{stroke:var(--line);fill:none} svg.ch text{fill:var(--muted);font-size:11px}
+svg.ch .grid{stroke:var(--line);stroke-dasharray:2 4}
+svg.ch path.ln{fill:none;stroke-width:2}
+svg.ch .faint{opacity:.28}
+svg.ch .thr{stroke:var(--accent);stroke-width:1.5}
+svg.ch .opt{stroke:var(--ink);stroke-dasharray:3 3}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);margin-top:8px}
+.legend button{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:5px}
+.legend button[aria-pressed="false"]{opacity:.35}
+.legend i{display:inline-block;width:16px;height:0;border-top:2px solid var(--mc)}
+.readout{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+.readout div{background:var(--sunk);border:1px solid var(--line);border-radius:6px;padding:6px 10px;font-size:12px;color:var(--muted)}
+.readout b{display:block;font-size:17px;color:var(--ink)}
+.cat th.grp{white-space:normal;min-width:170px;color:var(--ink);font-weight:500;font-size:13px}
+.cat th.grp small{display:block;color:var(--muted);font-weight:400;font-size:11.5px}
+.cat tr.area th{background:var(--sunk);color:var(--muted);font-size:12px;padding:4px 8px}
+.err{font-size:12.5px} .err small{color:var(--muted);display:block;font-size:11px}
+.bar{position:relative;height:14px;width:120px;background:var(--sunk);border-radius:3px}
+.bar i{position:absolute;top:0;bottom:0;border-radius:3px}
+.bar u{position:absolute;left:50%;top:-2px;bottom:-2px;width:1px;background:var(--muted)}
+.flips{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.flips h3{margin:0 0 6px;font-size:14px;font-weight:600}
+.flips h3 b{font-size:20px;margin-left:6px}
+.flips .fixed h3{color:var(--good)} .flips .broken h3{color:var(--viol)}
+.fl{max-height:360px;overflow:auto;border-top:1px solid var(--line)}
+.fr{all:unset;box-sizing:border-box;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;width:100%;padding:6px;border-bottom:1px solid var(--line);cursor:pointer;font-size:12.5px}
+.fr:hover{background:var(--sunk)}
+.fr[aria-current="true"]{background:var(--accent-soft);box-shadow:inset 3px 0 0 var(--accent)}
+.fr small{display:block;color:var(--muted)}
+.chip{display:inline-block;font-size:11.5px;border-radius:10px;padding:1px 8px;border:1px solid}
+.chip.v{color:var(--viol);border-color:var(--viol)} .chip.s{color:var(--muted);border-color:var(--line)}
+.meta{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px;margin:0}
+.meta dt{color:var(--muted)} .meta dd{margin:0;overflow-wrap:anywhere}
+.verdicts{margin:14px 0;display:grid;gap:7px}
+.verdict{display:grid;grid-template-columns:170px 1fr 48px;gap:10px;align-items:center;font-size:13px}
+.pb{position:relative;height:16px;background:var(--sunk);border-radius:3px;font-size:11px}
+.pb i{position:absolute;inset:0 auto 0 0;background:var(--mc);opacity:.8;border-radius:3px}
+.pb u{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--ink);text-decoration:none}
+.pb span{position:absolute;right:4px;top:0;line-height:16px}
+.ok{color:var(--muted)} .bad{color:var(--viol);font-weight:600}
+.raw{border:1px solid var(--line);border-radius:6px;background:var(--sunk);padding:10px 12px;margin-top:8px}
+.raw h3{margin:0 0 4px;font-size:12.5px;color:var(--muted);font-weight:500}
+.raw p{margin:0 0 10px;white-space:pre-wrap;overflow-wrap:anywhere;max-height:220px;overflow:auto}
+.raw.hidden p.t{filter:blur(6px);user-select:none}
+.empty{color:var(--muted);padding:14px 4px}
+@media (max-width: 1020px){
+  main{grid-template-columns:1fr}
+  header,.filters .inner,main{padding-left:16px;padding-right:16px}
+  .flips{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>팀 판정기 성능 판별</h1>
+    <p>프롬프트 변형별 팀 판정기를 기준 판정 모델과 같은 텍스트에서 비교합니다. 임계값은 dev에서 정하고, test는 최종 평가 때만 엽니다.</p>
+  </div>
+  <div class="status">
+    <div id="notice" class="notice" role="status"></div>
+    <label class="btn primary" for="csv">판정 CSV 불러오기</label>
+    <input id="csv" type="file" accept=".csv" multiple hidden>
+  </div>
+</header>
+
+<div class="filters"><div class="inner" id="filters"></div></div>
+
+<main>
+  <section class="panel span2" aria-labelledby="h-board">
+    <div class="ph"><div><h2 id="h-board">성적표</h2><p class="sub" id="board-sub"></p></div></div>
+    <div class="scroll"><table class="board" id="board"></table></div>
+    <p class="note" id="board-note"></p>
+  </section>
+
+  <section class="panel" aria-labelledby="h-thr">
+    <h2 id="h-thr">임계값에 따른 변화</h2>
+    <p class="sub" id="thr-sub"></p>
+    <div id="thrchart"></div>
+    <div class="readout" id="readout"></div>
+  </section>
+
+  <section class="panel" aria-labelledby="h-curve">
+    <div class="ph"><div><h2 id="h-curve">곡선 비교</h2><p class="sub">위반이 드물어 PR 곡선이 더 민감합니다. 범례를 눌러 모델을 켜고 끕니다.</p></div>
+      <div class="seg" id="curvemode"></div></div>
+    <div id="curve"></div>
+    <div class="legend" id="legend"></div>
+  </section>
+
+  <section class="panel span2" aria-labelledby="h-flip">
+    <h2 id="h-flip">판정 변화</h2>
+    <p class="sub" id="flip-sub"></p>
+    <div class="flips" id="flips"></div>
+  </section>
+
+  <section class="panel" aria-labelledby="h-cat">
+    <h2 id="h-cat">위해 유형별 오판 수</h2>
+    <p class="sub" id="cat-sub"></p>
+    <div class="scroll"><table class="cat" id="cat"></table></div>
+  </section>
+
+  <section class="panel" aria-labelledby="h-detail">
+    <h2 id="h-detail">텍스트 상세</h2>
+    <div id="detail"></div>
+  </section>
+</main>
+
+<script>
+const D = /*__DATA__*/null;
+const N = D.n;
+
+const INFO = {
+  llamaguard:  {label:'Llama Guard 3 1B', kind:'기준', c:'--b1', dash:'6 4', desc:'자체 범주로 판정 (규칙 문장 없음)'},
+  qwen3guard:  {label:'Qwen3Guard-Gen-0.6B', kind:'기준', c:'--b2', dash:'2 4', desc:'자체 범주로 판정 (규칙 문장 없음)'},
+  shieldgemma: {label:'ShieldGemma-2B', kind:'기준', c:'--b3', dash:'', desc:'정답 규칙 문장 입력 (규칙 문장만)'},
+  team_v0:     {label:'팀 v0', kind:'팀', c:'--t0', dash:'', desc:'원본 재현. ShieldGemma와 값이 같아야 정상'},
+  team_v1:     {label:'팀 v1', kind:'팀', c:'--t1', dash:'', desc:'거절 인식: 거절·경고 응답은 위반 아님을 명시'},
+  team_v2:     {label:'팀 v2', kind:'팀', c:'--t2', dash:'', desc:'규칙 구체화: 규칙 경로를 정책 문장에 추가'},
+  team_v3:     {label:'팀 v3', kind:'팀', c:'--t3', dash:'', desc:'거절 인식 + 규칙 구체화'},
+};
+const EXTRA = ['--t1','--t2','--t3','--b3'];
+function info(m){
+  if (!INFO[m]) INFO[m] = {label:m, kind:m.startsWith('team')?'팀':'기준', c:EXTRA[Object.keys(INFO).length%EXTRA.length], dash:'', desc:'불러온 판정 파일'};
+  return INFO[m];
+}
+const RA_KO = {'Discrimination, Exclusion, Toxicity, Hateful, Offensive':'차별·배제·혐오·공격','Human-Chatbot Interaction Harms':'사람-챗봇 상호작용 위해','Information Hazards':'정보 위해','Malicious Uses':'악의적 사용','Misinformation Harms':'오정보 위해'};
+const TH_KO = {'Adult Content':'성인 콘텐츠','Social stereotypes and unfair discrimination':'사회적 고정관념·부당한 차별','Toxic language (hate speech)':'유해 언어(혐오 표현)','Mental Health or Overreliance Crisis':'정신 건강·과의존 위기','Treat Chatbot as a Human':'챗봇을 사람처럼 대함','Compromise privacy by leaking or inferring private information (person/individual)':'개인 정보 유출·추론','Risks from leaking or inferring sensitive information (organization/gov)':'기관·정부 민감 정보 유출·추론','Assisting illegal activities':'불법 행위 지원','Nudging or advising users to perform unethical or unsafe actions':'비윤리·위험 행동 유도','Reducing the cost of disinformation campaigns':'허위 정보 캠페인 비용 절감','Causing material harm by disseminating misinformation e.g. in medicine or law':'의료·법률 오정보로 실질적 피해','Disseminating false or misleading information':'거짓·오도 정보 유포'};
+
+const S = {split:'dev', testOpen:false, thrMode:'devopt', custom:0.5, ref:'shieldgemma', target:null,
+  th:'all', resp:'all', common:true, curve:'pr', hidden:new Set(), sel:null, reveal:false};
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const val = (col,i) => D[col+'_dict'][D[col][i]];
+const f3 = v => v==null||isNaN(v) ? '—' : v.toFixed(3);
+const pct = v => v==null||isNaN(v) ? '—' : (v*100).toFixed(1)+'%';
+const P = (m,i) => D.p[m] ? D.p[m][i] : null;
+const cssv = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+/* ---------- 지표 (scikit-learn과 같은 정의) ---------- */
+function rocAuc(s,y){ const n=s.length; let pos=0; for(const v of y) pos+=v; const neg=n-pos; if(!pos||!neg) return NaN;
+  const idx=[...s.keys()].sort((a,b)=>s[a]-s[b]); let rs=0,k=0;
+  while(k<n){ let j=k; while(j+1<n&&s[idx[j+1]]===s[idx[k]]) j++; const r=(k+j)/2+1; for(let t=k;t<=j;t++) if(y[idx[t]]) rs+=r; k=j+1; }
+  return (rs-pos*(pos+1)/2)/(pos*neg); }
+function avgPrecision(s,y){ let pos=0; for(const v of y) pos+=v; if(!pos) return NaN;
+  const idx=[...s.keys()].sort((a,b)=>s[b]-s[a]); let tp=0,fp=0,prev=0,ap=0,k=0;
+  while(k<idx.length){ let j=k; while(j+1<idx.length&&s[idx[j+1]]===s[idx[k]]) j++;
+    for(let t=k;t<=j;t++) y[idx[t]]?tp++:fp++; ap+=(tp/(tp+fp))*((tp-prev)/pos); prev=tp; k=j+1; }
+  return ap; }
+function confusion(s,y,thr){ let tp=0,fp=0,fn=0,tn=0; for(let i=0;i<y.length;i++){ const p=s[i]>=thr?1:0; if(p&&y[i])tp++; else if(p)fp++; else if(y[i])fn++; else tn++; } return {tp,fp,fn,tn}; }
+function prf(c){ const p=c.tp+c.fp?c.tp/(c.tp+c.fp):0, r=c.tp+c.fn?c.tp/(c.tp+c.fn):0; return {p, r, f1:c.tp?2*c.tp/(2*c.tp+c.fp+c.fn):0}; }
+function kappa(c){ const n=c.tp+c.fp+c.fn+c.tn; if(!n) return NaN; const po=(c.tp+c.tn)/n, a1=(c.tp+c.fp)/n, b1=(c.tp+c.fn)/n, pe=a1*b1+(1-a1)*(1-b1); return pe===1?NaN:(po-pe)/(1-pe); }
+function bestF1Threshold(s,y){ // 후보 = 서로 다른 확률값, F1 최대인 임계값
+  const idx=[...s.keys()].sort((a,b)=>s[b]-s[a]); let pos=0; for(const v of y) pos+=v; if(!pos) return 0.5;
+  let tp=0,fp=0,best=-1,thr=0.5,k=0;
+  while(k<idx.length){ let j=k; while(j+1<idx.length&&s[idx[j+1]]===s[idx[k]]) j++;
+    for(let t=k;t<=j;t++) y[idx[t]]?tp++:fp++; const f=2*tp/(2*tp+fp+(pos-tp)); if(f>best){best=f; thr=s[idx[k]];} k=j+1; }
+  return thr; }
+function rng(seed){ return ()=>{ seed|=0; seed=seed+0x6D2B79F5|0; let t=Math.imul(seed^seed>>>15,1|seed); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+function bootstrap(s,y,thr,B=200){ // 95% 신뢰구간 (같은 시드 → 모델끼리 같은 재표본)
+  const r=rng(12345), n=y.length, aucs=[], f1s=[];
+  for(let b=0;b<B;b++){ const ss=new Array(n), yy=new Array(n); for(let i=0;i<n;i++){ const k=(r()*n)|0; ss[i]=s[k]; yy[i]=y[k]; }
+    const a=rocAuc(ss,yy); if(!isNaN(a)) aucs.push(a); f1s.push(prf(confusion(ss,yy,thr)).f1); }
+  const q=(arr,p)=>{ if(!arr.length) return NaN; arr.sort((a,b)=>a-b); return arr[Math.min(arr.length-1,Math.floor(p*arr.length))]; };
+  return {auc:[q(aucs,.025),q(aucs,.975)], f1:[q(f1s,.025),q(f1s,.975)]};
+}
+
+/* ---------- 데이터 선택 ---------- */
+const modelsIn = split => Object.keys(D.p).filter(m=>{ for(let i=0;i<N;i++) if(val('split',i)===split && P(m,i)!=null) return true; return false; })
+  .sort((a,b)=>(info(a).kind===info(b).kind ? a.localeCompare(b) : info(a).kind==='기준'?-1:1));
+function rowsFor(models){
+  const out=[];
+  for(let i=0;i<N;i++){
+    if (val('split',i)!==S.split) continue;
+    if (S.th!=='all' && val('types_of_harm',i)!==S.th) continue;
+    if (S.resp!=='all' && val('responder',i)!==S.resp) continue;
+    if (S.common ? models.some(m=>P(m,i)==null) : models.every(m=>P(m,i)==null)) continue;
+    out.push(i);
+  }
+  return out;
+}
+const DEVOPT = {};
+function devOpt(m){ // dev 전체(필터 무관)에서 F1 최대 임계값
+  if (DEVOPT[m]!==undefined) return DEVOPT[m];
+  const s=[],y=[]; for(let i=0;i<N;i++) if(val('split',i)==='dev' && P(m,i)!=null){ s.push(P(m,i)); y.push(D.y[i]); }
+  return DEVOPT[m] = s.length ? bestF1Threshold(s,y) : 0.5;
+}
+function thr(m){ if (S.thrMode==='fixed') return 0.5; if (S.thrMode==='custom' && m===S.target) return S.custom; return devOpt(m); }
+const pred = (m,i) => P(m,i)==null ? null : (P(m,i)>=thr(m)?1:0);
+
+/* ---------- 렌더링 ---------- */
+function renderNotice(){
+  const el=$('notice');
+  if (D.mock){ el.className='notice'; el.textContent='지금 보이는 위반 확률은 화면 시연용 가상값입니다. 텍스트와 사람 라벨은 실제 Do-Not-Answer 데이터입니다. spark_team_judge.py와 spark_judge.py 결과 CSV를 불러오면 실제 값으로 바뀝니다.'; }
+  else { el.className='notice real'; el.textContent='판정 파일: '+D.files.join(', '); }
+}
+function renderFilters(models){
+  const ths=D.types_of_harm_dict, rs=D.responder_dict;
+  const opt=(v,l,cur)=>`<option value="${esc(v)}"${v===cur?' selected':''}>${esc(l)}</option>`;
+  const testHas = modelsIn('test').length>0;
+  $('filters').innerHTML = `
+    <div class="f"><span>평가 분할</span><div class="seg" data-k="split">
+      <button type="button" data-v="dev" aria-pressed="${S.split==='dev'}">dev</button>
+      <button type="button" data-v="test" aria-pressed="${S.split==='test'}"${S.testOpen&&testHas?'':' disabled'}>test</button></div></div>
+    <label class="f"><span>test 열기</span><span class="inline"><input type="checkbox" id="f-test"${S.testOpen?' checked':''}>최종 평가 단계에서만${testHas?'':' (test 판정 없음)'}</span></label>
+    <label class="f"><span>임계값</span><select id="f-thr">
+      ${opt('devopt','dev에서 F1 최대인 값',S.thrMode)}${opt('fixed','0.5 고정',S.thrMode)}${opt('custom','비교 대상만 직접 지정',S.thrMode)}</select></label>
+    <label class="f"><span>기준 모델</span><select id="f-ref">${models.map(m=>opt(m,info(m).label,S.ref)).join('')}</select></label>
+    <label class="f"><span>비교 대상</span><select id="f-target">${models.map(m=>opt(m,info(m).label,S.target)).join('')}</select></label>
+    <label class="f"><span>위해 유형</span><select id="f-th">${opt('all','전체',S.th)}${ths.map(t=>opt(t,TH_KO[t]||t,S.th)).join('')}</select></label>
+    <label class="f"><span>응답 LLM</span><select id="f-resp">${opt('all','전체',S.resp)}${rs.map(r=>opt(r,r,S.resp)).join('')}</select></label>
+    <label class="f"><span>비교 범위</span><span class="inline"><input type="checkbox" id="f-common"${S.common?' checked':''}>모든 모델이 판정한 텍스트만</span></label>`;
+}
+
+function renderBoard(models, rows){
+  const pos=rows.reduce((a,i)=>a+D.y[i],0);
+  $('board-sub').textContent = `${S.split} · 텍스트 ${rows.length.toLocaleString()}건, 사람 라벨 위반 ${pos}건 (${pct(rows.length?pos/rows.length:NaN)}). 행을 누르면 비교 대상으로 지정됩니다. 괄호는 부트스트랩 95% 신뢰구간입니다.`;
+  const stats = models.map(m=>{
+    const ii=rows.filter(i=>P(m,i)!=null), s=ii.map(i=>P(m,i)), y=ii.map(i=>D.y[i]), t=thr(m), c=confusion(s,y,t), q=prf(c);
+    return {m, n:ii.length, pos:y.reduce((a,b)=>a+b,0), auc:rocAuc(s,y), ap:avgPrecision(s,y), t, ...q, k:kappa(c), ci:ii.length?bootstrap(s,y,t):null};
+  });
+  const ref=stats.find(x=>x.m===S.ref), teams=stats.filter(x=>info(x.m).kind==='팀');
+  const bestAuc=Math.max(...teams.map(x=>isNaN(x.auc)?-1:x.auc)), bestF1=Math.max(...teams.map(x=>x.f1));
+  const ci=a=>a&&!isNaN(a[0])?`<span class="ci">${a[0].toFixed(3)}–${a[1].toFixed(3)}</span>`:'';
+  const dl=(v,r)=> (r==null||isNaN(v)||isNaN(r)) ? '—' : `<span class="delta ${v-r>0.0005?'up':v-r<-0.0005?'down':''}">${v-r>=0?'+':''}${(v-r).toFixed(3)}</span>`;
+  $('board').innerHTML = `<thead><tr><th>모델</th><th>종류</th><th>설명</th><th class="num">판정</th><th class="num">ROC-AUC</th><th class="num">PR-AUC</th>
+    <th class="num">임계값</th><th class="num">F1 (위반)</th><th class="num">정밀도</th><th class="num">재현율</th><th class="num">사람 라벨과 κ</th>
+    <th class="num">ΔAUC</th><th class="num">ΔF1</th></tr></thead><tbody>${stats.map(x=>{ const I=info(x.m), team=I.kind==='팀';
+      return `<tr data-m="${x.m}" class="${x.m===S.target?'target':''} ${x.m===S.ref?'ref':''}" style="--mc:var(${I.c})">
+      <td class="name"><span class="sw"></span>${esc(I.label)}</td><td><span class="kind ${team?'team':''}">${I.kind}</span></td><td class="desc">${esc(I.desc)}</td>
+      <td class="num">${x.n.toLocaleString()}</td>
+      <td class="num ${team&&x.auc===bestAuc?'best':''}">${f3(x.auc)}${ci(x.ci&&x.ci.auc)}</td><td class="num">${f3(x.ap)}</td>
+      <td class="num">${x.t.toFixed(3)}</td><td class="num ${team&&x.f1===bestF1?'best':''}">${f3(x.f1)}${ci(x.ci&&x.ci.f1)}</td>
+      <td class="num">${f3(x.p)}</td><td class="num">${f3(x.r)}</td><td class="num">${f3(x.k)}</td>
+      <td class="num">${x.m===S.ref?'':dl(x.auc,ref&&ref.auc)}</td><td class="num">${x.m===S.ref?'':dl(x.f1,ref&&ref.f1)}</td></tr>`; }).join('')}</tbody>`;
+  const v0=stats.find(x=>x.m==='team_v0'), sg=stats.find(x=>x.m==='shieldgemma');
+  let note = `임계값: ${S.thrMode==='devopt'?'모델마다 dev에서 F1이 가장 높은 값을 고정해 씁니다 (test에서도 dev 값 사용).':S.thrMode==='fixed'?'모든 모델 0.5.':'비교 대상만 슬라이더 값, 나머지는 dev 최적값.'} Δ는 기준 모델(${esc(info(S.ref).label)}) 대비 차이입니다.`;
+  if (v0 && sg){ const ii=rows.filter(i=>P('team_v0',i)!=null&&P('shieldgemma',i)!=null); let mx=0; for(const i of ii) mx=Math.max(mx,Math.abs(P('team_v0',i)-P('shieldgemma',i)));
+    note += ` 재현 검증: 팀 v0과 ShieldGemma의 위반 확률 최대 차이 ${mx.toFixed(4)} (${ii.length}건)${mx<0.01?' → 기준선 재현 확인':' → 0에 가까워야 함. 프롬프트·전처리 차이를 확인하세요'}.`; }
+  if (pos<20) note += ` ⚠ 위반이 ${pos}건뿐이라 지표가 불안정합니다. 신뢰구간 폭을 함께 보세요.`;
+  $('board-note').textContent = note;
+}
+
+function lineChart({W=520,H=300,series,xLabel,yLabel,vlines=[],diag=false}){
+  const M={l:52,r:12,t:10,b:34}, iw=W-M.l-M.r, ih=H-M.t-M.b, x=v=>M.l+v*iw, y=v=>M.t+(1-v)*ih;
+  let g=''; for(const t of [0,.25,.5,.75,1]) g+=`<line class="grid" x1="${x(t)}" x2="${x(t)}" y1="${y(0)}" y2="${y(1)}"/><line class="grid" x1="${x(0)}" x2="${x(1)}" y1="${y(t)}" y2="${y(t)}"/>
+    <text x="${x(t)}" y="${H-M.b+15}" text-anchor="middle">${t}</text><text x="${M.l-6}" y="${y(t)+4}" text-anchor="end">${t}</text>`;
+  if (diag) g+=`<line class="grid" x1="${x(0)}" y1="${y(0)}" x2="${x(1)}" y2="${y(1)}"/>`;
+  for (const v of vlines) g+=`<line class="${v.cls}" x1="${x(v.x)}" x2="${x(v.x)}" y1="${y(0)}" y2="${y(1)}"><title>${esc(v.title)}</title></line>`;
+  const paths=series.map(s=>`<path class="ln ${s.faint?'faint':''}" d="${s.pts.map((p,k)=>(k?'L':'M')+x(p[0]).toFixed(1)+' '+y(p[1]).toFixed(1)).join('')}" stroke="${cssv(s.c)}" ${s.dash?`stroke-dasharray="${s.dash}"`:''} ${s.w?`stroke-width="${s.w}"`:''}><title>${esc(s.name)}</title></path>`).join('');
+  return `<svg class="ch" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(yLabel)} 대 ${esc(xLabel)}"><rect class="ax" x="${M.l}" y="${M.t}" width="${iw}" height="${ih}"/>${g}${paths}
+    <text x="${x(.5)}" y="${H-3}" text-anchor="middle">${esc(xLabel)}</text><text transform="translate(13 ${y(.5)}) rotate(-90)" text-anchor="middle">${esc(yLabel)}</text></svg>`;
+}
+
+function renderThreshold(rows){
+  const m=S.target, I=info(m), ii=rows.filter(i=>P(m,i)!=null), s=ii.map(i=>P(m,i)), y=ii.map(i=>D.y[i]);
+  const pts={p:[],r:[],f:[]};
+  for(let k=0;k<=100;k++){ const t=k/100, q=prf(confusion(s,y,t)); pts.p.push([t,q.p]); pts.r.push([t,q.r]); pts.f.push([t,q.f1]); }
+  $('thr-sub').textContent = `${I.label}의 임계값별 정밀도·재현율·F1 (${S.split}). 점선은 dev 최적값, 실선은 지금 쓰는 값입니다.`;
+  $('thrchart').innerHTML = lineChart({series:[
+      {name:'정밀도',pts:pts.p,c:'--b1',dash:'6 4'},{name:'재현율',pts:pts.r,c:'--b2',dash:'2 4'},{name:'F1',pts:pts.f,c:I.c,w:3}],
+    xLabel:'임계값', yLabel:'값', vlines:[{x:devOpt(m),cls:'opt',title:'dev 최적'},{x:thr(m),cls:'thr',title:'현재 임계값'}]})
+    + `<div class="legend"><span><i style="--mc:var(--b1);border-top-style:dashed"></i>정밀도</span><span><i style="--mc:var(--b2);border-top-style:dotted"></i>재현율</span><span><i style="--mc:var(${I.c});border-top-width:3px"></i>F1</span></div>`
+    + (S.thrMode==='custom'?`<div class="range" style="margin-top:8px"><span class="note" style="margin:0">임계값 직접 지정</span><input id="f-custom" type="range" min="0.01" max="0.99" step="0.01" value="${S.custom}"><output>${S.custom.toFixed(2)}</output></div>`:'');
+  const c=confusion(s,y,thr(m)), q=prf(c);
+  $('readout').innerHTML = `<div>임계값<b>${thr(m).toFixed(3)}</b></div><div>F1<b>${f3(q.f1)}</b></div><div>놓친 위반 (FN)<b>${c.fn}</b></div><div>잘못 잡은 정상 (FP)<b>${c.fp}</b></div>`;
+}
+
+function curvePts(s,y,mode){
+  const idx=[...s.keys()].sort((a,b)=>s[b]-s[a]); let pos=0; for(const v of y) pos+=v; const neg=y.length-pos; if(!pos||!neg) return [];
+  let tp=0,fp=0,k=0; const out = mode==='roc'?[[0,0]]:[[0,1]];
+  while(k<idx.length){ let j=k; while(j+1<idx.length&&s[idx[j+1]]===s[idx[k]]) j++; for(let t=k;t<=j;t++) y[idx[t]]?tp++:fp++;
+    out.push(mode==='roc'?[fp/neg,tp/pos]:[tp/pos,tp/(tp+fp)]); k=j+1; }
+  return out;
+}
+function renderCurve(models, rows){
+  $('curvemode').innerHTML = [['pr','PR 곡선'],['roc','ROC 곡선']].map(([k,l])=>`<button type="button" data-curve="${k}" aria-pressed="${S.curve===k}">${l}</button>`).join('');
+  const series = models.filter(m=>!S.hidden.has(m)).map(m=>{ const ii=rows.filter(i=>P(m,i)!=null), I=info(m);
+    return {name:I.label, pts:curvePts(ii.map(i=>P(m,i)), ii.map(i=>D.y[i]), S.curve), c:I.c, dash:I.dash, w:(m===S.target||m===S.ref)?3:1.5, faint:!(m===S.target||m===S.ref)}; });
+  series.sort((a,b)=>(a.faint?0:1)-(b.faint?0:1));
+  $('curve').innerHTML = lineChart({series, xLabel:S.curve==='roc'?'거짓 양성 비율':'재현율', yLabel:S.curve==='roc'?'참 양성 비율':'정밀도', diag:S.curve==='roc'});
+  $('legend').innerHTML = models.map(m=>{ const I=info(m); return `<button type="button" data-leg="${m}" aria-pressed="${!S.hidden.has(m)}" style="--mc:var(${I.c})"><i style="border-top-style:${I.dash?(I.dash.startsWith('2')?'dotted':'dashed'):'solid'}"></i>${esc(I.label)}</button>`; }).join('');
+}
+
+function renderFlips(rows){
+  const R=S.ref, T=S.target;
+  const ii=rows.filter(i=>P(R,i)!=null&&P(T,i)!=null), fixed=[], broken=[];
+  for(const i of ii){ const r=pred(R,i)===D.y[i], t=pred(T,i)===D.y[i]; if(!r&&t) fixed.push(i); else if(r&&!t) broken.push(i); }
+  const by=(a,b)=>Math.abs(P(T,b)-P(R,b))-Math.abs(P(T,a)-P(R,a)); fixed.sort(by); broken.sort(by);
+  const wr=ii.filter(i=>pred(R,i)!==D.y[i]).length, wt=ii.filter(i=>pred(T,i)!==D.y[i]).length;
+  $('flip-sub').textContent = `${info(R).label} → ${info(T).label}, 공통 ${ii.length}건. 오판 ${wr}건 → ${wt}건 (${wt-wr>=0?'+':''}${wt-wr}). 각 모델은 자기 임계값으로 판정합니다.`;
+  const row=i=>`<button type="button" class="fr" data-i="${i}" aria-current="${i===S.sel}"><span>${esc(D.text_id[i])}<small>${esc(TH_KO[val('types_of_harm',i)]||val('types_of_harm',i))}</small></span>
+    <span><span class="chip ${D.y[i]?'v':'s'}">${D.y[i]?'위반':'정상'}</span> ${P(R,i).toFixed(2)} → ${P(T,i).toFixed(2)}</span></button>`;
+  $('flips').innerHTML = `<div class="fixed"><h3>고쳐진 판정<b>${fixed.length}</b></h3><div class="fl">${fixed.slice(0,80).map(row).join('')||'<p class="empty">없음</p>'}</div></div>
+    <div class="broken"><h3>새로 틀린 판정<b>${broken.length}</b></h3><div class="fl">${broken.slice(0,80).map(row).join('')||'<p class="empty">없음</p>'}</div></div>`;
+}
+
+function renderCat(rows){
+  const R=S.ref, T=S.target, groups=new Map();
+  for(const i of rows){ if(P(R,i)==null||P(T,i)==null) continue; const g=val('types_of_harm',i); if(!groups.has(g)) groups.set(g,{area:val('risk_area',i),ii:[]}); groups.get(g).ii.push(i); }
+  const order=[...groups.entries()].sort((a,b)=>a[1].area.localeCompare(b[1].area)||a[0].localeCompare(b[0]));
+  const err=(m,ii)=>{ let fn=0,fp=0; for(const i of ii){ const p=pred(m,i); if(p!==D.y[i]) D.y[i]?fn++:fp++; } return {fn,fp,w:fn+fp}; };
+  let maxD=1; const st=order.map(([g,o])=>{ const a=err(R,o.ii), b=err(T,o.ii); maxD=Math.max(maxD,Math.abs(b.w-a.w)); return {g,o,a,b}; });
+  $('cat-sub').textContent = `${info(R).label}과 ${info(T).label}의 오판 수 (FN 놓친 위반 · FP 잘못 잡은 정상). 막대가 왼쪽(초록)이면 오판이 줄어든 것입니다.`;
+  let last=null, h=`<thead><tr><th>위해 유형</th><th class="num">위반/전체</th><th>${esc(info(R).label)}</th><th>${esc(info(T).label)}</th><th>변화</th></tr></thead><tbody>`;
+  for(const {g,o,a,b} of st){
+    if (o.area!==last){ h+=`<tr class="area"><th colspan="5">${esc(RA_KO[o.area]||o.area)}</th></tr>`; last=o.area; }
+    const d=b.w-a.w, w=Math.abs(d)/maxD*50;
+    h+=`<tr><th class="grp">${esc(TH_KO[g]||g)}<small>${esc(g)}</small></th><td class="num">${o.ii.reduce((s,i)=>s+D.y[i],0)} / ${o.ii.length}</td>
+      <td class="err">${a.w}<small>FN ${a.fn} · FP ${a.fp}</small></td><td class="err">${b.w}<small>FN ${b.fn} · FP ${b.fp}</small></td>
+      <td><div class="bar" title="${d>0?'+':''}${d}"><u></u><i style="${d<0?`right:50%;width:${w}%;background:var(--good)`:`left:50%;width:${w}%;background:var(--viol)`}"></i></div><span class="err">${d>0?'+':''}${d}</span></td></tr>`;
+  }
+  $('cat').innerHTML = h+'</tbody>';
+}
+
+function renderDetail(models){
+  const i=S.sel, el=$('detail');
+  if (i==null){ el.innerHTML='<p class="empty">판정 변화 목록에서 텍스트를 누르면 모델별 위반 확률과 원문이 나옵니다.</p>'; return; }
+  const sh=val('specific_harms',i);
+  el.innerHTML = `<dl class="meta"><dt>텍스트</dt><dd>${esc(D.text_id[i])} (${esc(val('split',i))})</dd><dt>응답 LLM</dt><dd>${esc(val('responder',i))}</dd>
+    <dt>정답 규칙 경로</dt><dd>${esc(RA_KO[val('risk_area',i)]||val('risk_area',i))} › ${esc(TH_KO[val('types_of_harm',i)]||val('types_of_harm',i))} › ${esc(sh.split(':')[0])}</dd>
+    <dt>사람 라벨</dt><dd><span class="chip ${D.y[i]?'v':'s'}">${D.y[i]?'위반':'정상'}</span></dd></dl>
+    <div class="verdicts">${models.map(m=>{ const I=info(m), p=P(m,i), pr=pred(m,i);
+      return `<div class="verdict" style="--mc:var(${I.c})"><span><span class="sw"></span>${esc(I.label)}</span>
+        ${p==null?'<div class="pb"><span>—</span></div>':`<div class="pb"><i style="width:${(p*100).toFixed(1)}%"></i><u style="left:${(thr(m)*100).toFixed(1)}%"></u><span>${p.toFixed(3)}</span></div>`}
+        <span class="${pr==null?'ok':pr!==D.y[i]?'bad':'ok'}">${pr==null?'없음':pr!==D.y[i]?'틀림':'맞음'}</span></div>`; }).join('')}
+      <span class="note" style="margin:0">막대 안 세로선은 그 모델의 임계값입니다.</span></div>
+    <button class="btn" id="reveal" type="button" aria-expanded="${S.reveal}">${S.reveal?'원문 가리기':'원문 보기 (유해할 수 있음)'}</button>
+    <div class="raw ${S.reveal?'':'hidden'}">
+      <h3>맥락: 사용자 질문</h3><p class="t">${S.reveal?esc(val('question',i)):'가려진 텍스트입니다'}</p>
+      <h3>판정 대상: ${esc(val('responder',i))} 응답</h3><p class="t">${S.reveal?esc(D.response[i]):'가려진 텍스트입니다'}</p>
+      <h3>정답 규칙 문장</h3><p>${esc(sh)}</p></div>`;
+}
+
+function render(){
+  if (S.split==='test' && (!S.testOpen || !modelsIn('test').length)) S.split='dev';
+  renderNotice();
+  const models=modelsIn(S.split);
+  if (!models.length){
+    renderFilters(models);
+    $('board-sub').textContent=''; $('board-note').textContent='';
+    $('board').innerHTML='<tbody><tr><td class="empty">이 분할에 판정 결과가 없습니다. 판정 CSV를 불러오세요.</td></tr></tbody>';
+    for (const id of ['thrchart','readout','curve','legend','flips','cat','detail','thr-sub','flip-sub','cat-sub']) $(id).innerHTML='';
+    return;
+  }
+  if (!models.includes(S.ref)) S.ref = models.includes('shieldgemma')?'shieldgemma':models[0];
+  if (!models.includes(S.target) || S.target===null){ const teams=models.filter(m=>info(m).kind==='팀'&&m!=='team_v0'); S.target = teams[teams.length-1] || models.find(m=>m!==S.ref) || models[0]; }
+  const rows=rowsFor(models);
+  if (S.sel!=null && !rows.includes(S.sel)){ S.sel=null; S.reveal=false; }
+  renderFilters(models); renderBoard(models,rows); renderThreshold(rows); renderCurve(models,rows); renderFlips(rows); renderCat(rows); renderDetail(models);
+}
+
+/* ---------- 이벤트 ---------- */
+document.addEventListener('change', e=>{
+  const t=e.target;
+  if (t.id==='f-test'){ S.testOpen=t.checked; if(!t.checked) S.split='dev'; }
+  else if (t.id==='f-thr') S.thrMode=t.value;
+  else if (t.id==='f-ref') S.ref=t.value;
+  else if (t.id==='f-target') S.target=t.value;
+  else if (t.id==='f-th') S.th=t.value;
+  else if (t.id==='f-resp') S.resp=t.value;
+  else if (t.id==='f-common') S.common=t.checked;
+  else if (t.id==='csv'){ loadCsvs([...t.files]); t.value=''; return; }
+  else return;
+  render();
+});
+document.addEventListener('input', e=>{ if (e.target.id==='f-custom'){ S.custom=+e.target.value; render(); const el=$('f-custom'); el && el.focus(); } });
+document.addEventListener('click', e=>{
+  const seg=e.target.closest('.seg button[data-v]'); if (seg){ S.split=seg.dataset.v; render(); return; }
+  const cv=e.target.closest('[data-curve]'); if (cv){ S.curve=cv.dataset.curve; render(); return; }
+  const lg=e.target.closest('[data-leg]'); if (lg){ const m=lg.dataset.leg; S.hidden.has(m)?S.hidden.delete(m):S.hidden.add(m); render(); return; }
+  const tr=e.target.closest('.board tbody tr[data-m]'); if (tr){ S.target=tr.dataset.m; render(); return; }
+  const fr=e.target.closest('[data-i]'); if (fr){ const i=+fr.dataset.i; if(S.sel!==i){S.sel=i; S.reveal=false;} render(); return; }
+  if (e.target.id==='reveal'){ S.reveal=!S.reveal; renderDetail(modelsIn(S.split)); }
+});
+
+/* ---------- CSV 불러오기: text_id, model, p_violation (여러 파일 가능) ---------- */
+function parseCsv(text){ const rows=[]; let row=[],f='',q=false;
+  for(let k=0;k<text.length;k++){ const c=text[k];
+    if(q){ if(c==='"'){ if(text[k+1]==='"'){f+='"';k++;} else q=false; } else f+=c; }
+    else if(c==='"') q=true; else if(c===','){row.push(f);f='';} else if(c==='\n'){row.push(f.replace(/\r$/,''));rows.push(row);row=[];f='';} else f+=c; }
+  if(f||row.length){row.push(f);rows.push(row);} return rows; }
+async function loadCsvs(files){
+  const idx=new Map(D.text_id.map((t,i)=>[t,i])); let total=0; const names=[];
+  if (D.mock){ D.p={}; D.files=[]; D.mock=false; }
+  for (const file of files){
+    const rows=parseCsv(await file.text()), head=rows.shift().map(s=>s.trim());
+    const ci=head.indexOf('text_id'), cm=head.indexOf('model'), cp=head.indexOf('p_violation');
+    if (ci<0||cm<0||cp<0){ alert(`${file.name}: text_id, model, p_violation 컬럼이 필요합니다.`); continue; }
+    let hit=0;
+    for (const r of rows){ if(r.length<head.length) continue; const i=idx.get(r[ci].trim()); if(i==null) continue;
+      const m=r[cm].trim(), p=parseFloat(r[cp]); (D.p[m] ||= new Array(N).fill(null))[i]=isNaN(p)?null:p; info(m); hit++; }
+    total+=hit; names.push(`${file.name} (${hit.toLocaleString()}행)`);
+  }
+  if (!total){ alert('이 데이터의 text_id와 맞는 행이 없습니다.'); return; }
+  D.files.push(...names); for (const k in DEVOPT) delete DEVOPT[k]; S.target=null; render();
+}
+
+render();
+</script>
+</body>
+</html>

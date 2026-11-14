@@ -1,0 +1,32 @@
+# 가상환경, 캐시
+.venv/
+venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# 데이터: 원본·전처리·판정 결과는 각자 스크립트로 만듦 (용량 + 공개 저장소)
+data/raw/*
+data/processed/*
+!data/raw/jigsaw/
+!data/raw/prosocial/
+data/raw/jigsaw/*
+data/raw/prosocial/*
+!data/**/.gitkeep
+
+# 실행 결과
+reports/
+app/p2_view.html
+app/team_eval.html
+app/system.html
+
+# 개인 설정, 토큰
+.env
+*.token
+.huggingface/
+
+# OS, 에디터
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

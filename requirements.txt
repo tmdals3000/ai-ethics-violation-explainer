@@ -1,0 +1,10 @@
+# Python 3.12 기준. torch는 GPU에 맞는 빌드를 따로 설치 (docs/SETUP.md 참고)
+pyspark[sql]>=4.0
+pandas<3              # PySpark가 pandas 3을 아직 완전히 지원하지 않음
+numpy
+pyarrow
+scikit-learn
+tqdm
+transformers>=4.51.0  # Qwen3Guard 요구 버전
+accelerate
+sentence-transformers # 규칙 찾기용 all-roberta-large-v1
