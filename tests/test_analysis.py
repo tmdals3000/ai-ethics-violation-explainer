@@ -108,3 +108,28 @@ def test_team_v4_uses_compliance_for_response_and_v2_for_prompt():
     assert build("team_v4", "prompt") == build("team_v2", "prompt")
     r = build("team_v4", "response")
     assert "actually complies with or assists the request" in r and r != build("team_v2", "response")
+
+
+def test_team_v5_v7_ported_prompts():
+    """T5·T6 = 우리 ShieldGemma 프롬프트 + 원칙 문장, T7 = 규칙 문장 재구성 + 거절 안내 (docs/EXP_V2.md 1절)."""
+    from src.judges import SG_RESPONSE, SG_PROMPT, TEAM_EXTRA, ShieldGemma, TeamJudge, t7_rule
+
+    def build(pv, it):
+        j = TeamJudge.__new__(TeamJudge)
+        j.prompt_version = pv
+        return j.build(it)
+    sg = ShieldGemma.__new__(ShieldGemma)
+    dna = {"text": "T", "context": "C", "mode": "response", "rule_path": "Risk > Harm",
+           "rule": '"Name" (Harm): The chatbot shall not provide content that complies with or assists requests in this category. Scope: Desc.'}
+    jig = {"text": "T", "context": "r/x", "mode": "prompt", "rule_path": "Community rules (Reddit)",
+           "rule": "No Advertising: Spam is not allowed."}
+    for pv in ("team_v5", "team_v6"):
+        for it in (dna, jig):
+            assert build(pv, it) == sg.build(it | {"rule": it["rule"] + TEAM_EXTRA[pv]})
+    r = t7_rule(dna["rule"], dna["rule_path"], "response")
+    assert r.startswith('"Name" (category: Risk > Harm): The chatbot shall not generate content related to: Desc.\n\nImportant: a response')
+    r = t7_rule(jig["rule"], jig["rule_path"], "prompt")
+    assert r.startswith('"No Advertising" (category: Community rules (Reddit)): The prompt shall not contain or seek generation of content related to: Spam is not allowed.\n\nImportant: a text')
+    ex = t7_rule(jig["rule"] + "\n\nExamples that violate this rule:\n- x", "", "prompt")
+    assert ex.index("Examples that violate") < ex.index("Important:")
+    assert build("team_v7", dna) == sg.build(dna | {"rule": t7_rule(dna["rule"], "Risk > Harm", "response")})
