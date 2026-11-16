@@ -1,0 +1,6 @@
+run_id,prompt_version,n_items,n_unique_prompts,n_cached,n_new,est_minutes
+SG,official,14709,12987,12987,0,0.0
+T2,team_v2,14709,13027,13027,0,0.0
+T5,team_v5,14709,12987,0,12987,45.5
+T6,team_v6,14709,12987,0,12987,45.5
+T7,team_v7,14709,12987,0,12987,45.5

@@ -1,0 +1,6 @@
+run_id,n_prompts,n_new_forward,seconds,conditions
+SG,14709,0,0.2,
+T2,14709,0,0.2,
+T5,3039,2998,418.2,rule_only
+T6,3039,2998,399.6,rule_only
+T7,3039,2998,415.7,rule_only
