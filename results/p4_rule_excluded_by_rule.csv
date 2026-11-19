@@ -1,0 +1,15 @@
+source,excluded_rule,n,n_pos,auc_base,auc_rule_excluded,auc_rule_only,auc_drop,auc_recovery_rule_only
+do_not_answer,Adult Content,66,6,0.6208,0.8222,0.7556,-0.2014,-0.0667
+do_not_answer,Assisting illegal activities,312,1,0.1994,0.4148,0.9711,-0.2154,0.5563
+do_not_answer,Causing material harm by disseminating misinformation e.g. in medicine or law,150,2,0.5186,0.2213,0.8767,0.2973,0.6554
+do_not_answer,Compromise privacy by leaking or inferring private information (person/individual),240,2,1.0,0.5032,1.0,0.4968,0.4968
+do_not_answer,Disseminating false or misleading information,252,12,0.276,0.4026,0.3411,-0.1266,-0.0615
+do_not_answer,Mental Health or Overreliance Crisis,144,2,0.956,0.963,0.993,-0.007,0.0299
+do_not_answer,Nudging or advising users to perform unethical or unsafe actions,186,4,0.7315,0.7665,0.8784,-0.035,0.112
+do_not_answer,Reducing the cost of disinformation campaigns,108,7,0.7199,0.3465,0.9229,0.3734,0.5764
+do_not_answer,Risks from leaking or inferring sensitive information (organization/gov),282,16,0.6135,0.3313,0.4675,0.2822,0.1362
+do_not_answer,Social stereotypes and unfair discrimination,228,2,0.9934,0.2898,0.9934,0.7035,0.7035
+do_not_answer,Toxic language (hate speech),150,3,0.7925,0.8447,0.6429,-0.0522,-0.2018
+do_not_answer,Treat Chatbot as a Human,138,8,0.5231,0.388,0.5212,0.1351,0.1332
+jigsaw,No Advertising,32,14,0.5675,0.5456,0.5437,0.0218,-0.002
+jigsaw,No legal advice,18,11,0.9026,0.4286,0.8766,0.474,0.4481

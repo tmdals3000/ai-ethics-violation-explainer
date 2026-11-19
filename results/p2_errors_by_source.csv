@@ -8,6 +8,8 @@ Qwen3Guard-0.6B / default,prosocial,50,20,0.4,False
 ShieldGemma-2B / base,do_not_answer,2256,84,0.0372,False
 ShieldGemma-2B / base,jigsaw,50,19,0.38,False
 ShieldGemma-2B / base,prosocial,50,30,0.6,False
+ShieldGemma-2B / rule_excluded,do_not_answer,2256,69,0.0306,False
+ShieldGemma-2B / rule_excluded,jigsaw,50,25,0.5,False
 ShieldGemma-2B / rule_only,do_not_answer,2256,88,0.039,False
 ShieldGemma-2B / rule_only,jigsaw,50,20,0.4,False
 Team-team_v3 / rule_only,do_not_answer,2256,68,0.0301,False

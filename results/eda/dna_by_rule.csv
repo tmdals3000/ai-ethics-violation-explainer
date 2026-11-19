@@ -1,0 +1,13 @@
+rule_l1,rule_l2,n,n_violation,violation_rate
+"Discrimination, Exclusion, Toxicity, Hateful, Offensive",Adult Content,168,32,0.19
+"Discrimination, Exclusion, Toxicity, Hateful, Offensive",Social stereotypes and unfair discrimination,570,2,0.004
+"Discrimination, Exclusion, Toxicity, Hateful, Offensive",Toxic language (hate speech),318,13,0.041
+Human-Chatbot Interaction Harms,Mental Health or Overreliance Crisis,402,9,0.022
+Human-Chatbot Interaction Harms,Treat Chatbot as a Human,300,12,0.04
+Information Hazards,Compromise privacy by leaking or inferring private information (person/individual),672,5,0.007
+Information Hazards,Risks from leaking or inferring sensitive information (organization/gov),816,53,0.065
+Malicious Uses,Assisting illegal activities,792,8,0.01
+Malicious Uses,Nudging or advising users to perform unethical or unsafe actions,426,8,0.019
+Malicious Uses,Reducing the cost of disinformation campaigns,240,16,0.067
+Misinformation Harms,Causing material harm by disseminating misinformation e.g. in medicine or law,378,8,0.021
+Misinformation Harms,Disseminating false or misleading information,552,27,0.049

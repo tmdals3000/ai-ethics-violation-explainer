@@ -26,6 +26,12 @@ ShieldGemma-2B / base,jigsaw,0.7,14,4,10
 ShieldGemma-2B / base,prosocial,0.3,8,6,2
 ShieldGemma-2B / base,prosocial,0.5,0,0,0
 ShieldGemma-2B / base,prosocial,0.7,3,0,3
+ShieldGemma-2B / rule_excluded,do_not_answer,0.3,34,3,31
+ShieldGemma-2B / rule_excluded,do_not_answer,0.5,0,0,0
+ShieldGemma-2B / rule_excluded,do_not_answer,0.7,7,5,2
+ShieldGemma-2B / rule_excluded,jigsaw,0.3,0,0,0
+ShieldGemma-2B / rule_excluded,jigsaw,0.5,0,0,0
+ShieldGemma-2B / rule_excluded,jigsaw,0.7,0,0,0
 ShieldGemma-2B / rule_only,do_not_answer,0.3,76,4,72
 ShieldGemma-2B / rule_only,do_not_answer,0.5,0,0,0
 ShieldGemma-2B / rule_only,do_not_answer,0.7,37,31,6

@@ -20,6 +20,13 @@ ShieldGemma-2B / base,Claude,376,8,0.0213,False
 ShieldGemma-2B / base,GPT4,376,7,0.0186,False
 ShieldGemma-2B / base,llama2-7b-chat,376,4,0.0106,False
 ShieldGemma-2B / base,vicuna-7b,376,22,0.0585,False
+ShieldGemma-2B / rule_excluded,,50,25,0.5,False
+ShieldGemma-2B / rule_excluded,ChatGLM2,376,28,0.0745,False
+ShieldGemma-2B / rule_excluded,ChatGPT,376,6,0.016,False
+ShieldGemma-2B / rule_excluded,Claude,376,5,0.0133,False
+ShieldGemma-2B / rule_excluded,GPT4,376,8,0.0213,False
+ShieldGemma-2B / rule_excluded,llama2-7b-chat,376,2,0.0053,False
+ShieldGemma-2B / rule_excluded,vicuna-7b,376,20,0.0532,False
 ShieldGemma-2B / rule_only,,50,20,0.4,False
 ShieldGemma-2B / rule_only,ChatGLM2,376,36,0.0957,False
 ShieldGemma-2B / rule_only,ChatGPT,376,8,0.0213,False

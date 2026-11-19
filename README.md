@@ -47,8 +47,9 @@ Project 4 개인 데모입니다. 데이터 3종으로 PDF 의 전체 흐름(전
 | team_v2 | 질문이 아니라 응답만 판정 | 0.576 | 0.419 |
 | team_v3 | v1 + 실제로 금지된 도움을 줬을 때만 위반 | 0.611 | **0.443** |
 
-- 가설: DNA 응답 대부분은 거절문인데, 거절문 속 위험한 주제 단어 때문에 위반으로 잘못 판정한다.
+- 처음 가설: DNA 응답 대부분은 거절문인데, 거절문 속 위험한 주제 단어 때문에 위반으로 잘못 판정한다.
 - "거절은 위반이 아니다"를 넣은 v1·v3 가 기준보다 나아졌고, "응답만 판정"(v2)은 효과가 없었습니다.
+- **후속 분석(`docs/DATASET.md` 5절)으로 가설을 고쳤습니다.** 모델은 원래 거절문을 거의 위반으로 잡지 않았고(0~1%), v3 의 개선은 '면책 후 답변'을 덜 잡은 덕분이었습니다. DNA 의 진짜 문제는 **'그대로 따른' 응답의 위반을 놓치는 것**(위반 65건 중 47~56건)입니다.
 - PR-AUC 기준으로 **v3 를 팀 판정기로 선택**했고, DNA dev 전체(2,256개)에서도 기준보다 좋았습니다 (AUC 0.563 → 0.591).
 - 300개 표본이라 차이가 크지 않으므로 "개선 경향"으로 봐야 합니다.
 
@@ -82,7 +83,33 @@ Project 4 개인 데모입니다. 데이터 3종으로 PDF 의 전체 흐름(전
 
 - DNA 에서는 후보 규칙 대신 정답 규칙을 주면 좋아집니다 → **규칙 찾기를 고치면 판정도 좋아질 여지**가 있습니다.
 - Jigsaw 는 규칙이 2개뿐이라 규칙 찾기가 거의 항상 맞아서(top-1 0.94) 차이가 없습니다.
+
+**처음 보는 규칙 실험 (규칙 제외, DNA, ShieldGemma)**
+
+| 조건 | 기본 (후보 5개) | 규칙 제외 | 규칙 문장만 |
+|---|---|---|---|
+| ROC-AUC | 0.499 | 0.449 | 0.563 |
+
+- 하락폭(기본 − 규칙 제외) 0.050, 회복폭(규칙 문장만 − 규칙 제외) 0.114. 위해 유형 12개별 결과는 `results/p4_rule_excluded_by_rule.csv` (유형마다 위반이 2~16건이라 흔들림이 큼).
+
+**Jigsaw 규칙별 (ShieldGemma)**
+
+| 뺀 규칙 | n (위반) | 기본 | 규칙 제외 | 규칙 문장만 | 하락폭 | 회복폭 |
+|---|---|---|---|---|---|---|
+| No Advertising | 32 (14) | 0.568 | 0.546 | 0.544 | 0.022 | −0.002 |
+| No legal advice | 18 (11) | 0.903 | 0.429 | 0.877 | **0.474** | 0.448 |
+
+- '법률 조언 금지'는 규칙을 빼면 AUC 가 0.90 → 0.43 으로 무너지고, 정답 규칙을 다시 주면 0.88 로 회복됩니다. 처음 보는 규칙에 대응하지 못한다는 것을 잘 보여 주는 예입니다.
+- 규칙 제외는 이미 있는 후보별 판정에서 정답 유형 후보를 빼고 계산한 **근사**입니다(GPU 없이 계산, `derive_conditions.py`). 남은 후보가 없어 0 으로 둔 텍스트: DNA 344개, Jigsaw 46개.
 - 화면 P4 탭에서는 임계값을 바꿨을 때 뒤집히는 판정(맞게/틀리게)도 볼 수 있습니다.
+
+## 문서
+
+| 문서 | 내용 |
+|---|---|
+| `docs/DATASET.md` | 데이터셋 살피기, 판정 모델이 DNA 에서 어떻게 판정하는지 |
+| `docs/SCHEMA.md` | 모든 파일과 열, ID·판정 조건 이름 규칙 |
+| `docs/VIEWS.md` | 화면 구성: 탭별 질문, 인코딩, 상호작용, 다음 단계 |
 
 ## 파일 구성
 
@@ -95,6 +122,9 @@ Project 4 개인 데모입니다. 데이터 3종으로 PDF 의 전체 흐름(전
 | 3 | `judge_colab2.ipynb` | 2차 판정: 새 데이터, 팀 프롬프트 3개 비교, 팀 판정기, ShieldGemma 기본(후보 5개) → `judgments_new.csv`, `base_candidates.csv`, `team_prompt_comparison.csv` | Colab·Kaggle T4 |
 | 4 | `analyze.py` | P1 τ 비교·경계 사례, P2 지표·모델 간 κ·오판 행렬, P3 원인, P4 효과 → `results/` | 노트북 |
 | 4 | `diagnose.py` | P3 원인 규칙 1–4 (analyze·app 공통) | — |
+| 4 | `derive_conditions.py` | '규칙 제외' 조건을 후보별 판정에서 계산 → `judgments_derived.csv` (analyze.py 보다 먼저) | 노트북 |
+| 분석 | `eda.py` | 데이터셋 살피기 → `results/eda/` | 노트북 |
+| 분석 | `dna_judge_analysis.py` | 응답 유형·LLM·길이별 오판 → `results/dna_judge/` (analyze.py 다음) | 노트북 |
 | 5 | `app.py` | Streamlit 화면 4탭 + 공통 필터 + 선택 연동 + 원문 가리기 | 노트북 |
 
 ## 실행 방법
@@ -104,7 +134,10 @@ pip install -r requirements.txt
 python preprocess.py        # data_en.csv, jigsaw/train.csv 필요. ProsocialDialog 는 자동 다운로드
 python make_assets.py       # CPU 로 DNA 전체 임베딩은 1시간 이상
 # judge_input.csv 를 Colab 에 올리고 judge_colab.ipynb, judge_colab2.ipynb 실행 → 결과 csv 를 이 폴더에
+python derive_conditions.py
 python analyze.py
+python eda.py
+python dna_judge_analysis.py
 streamlit run app.py
 ```
 
@@ -134,7 +167,8 @@ streamlit run app.py
 
 ## 한계와 다음 할 일
 
-- **판정 조건 2개 없음:** '규칙 제외'(처음 보는 규칙에서 AUC 하락폭)와 '규칙 + 예시'(회복폭). Jigsaw 예시는 `jigsaw_examples.csv` 로 정리해 둠
+- **'규칙 + 예시' 조건 없음** (회복폭). Jigsaw 예시는 `jigsaw_examples.csv` 로 정리해 둠. '규칙 제외'는 근사로 계산함
+- **팀 판정기 v4 (DNA 정의에 맞춘 원칙)** 시험 필요: `docs/DATASET.md` 6절
 - **팀 판정기의 기본 조건 없음:** 팀 판정기는 '규칙 문장만'만 돌림
 - **'규칙 문장 편집 → 다시 판정' 없음:** 노트북에 GPU 가 없어 화면에서 바로 판정할 수 없음. 고친 규칙 문장을 Colab 에서 미리 판정해 두는 방식을 검토
 - **표본이 작음:** Jigsaw·ProsocialDialog 50개씩

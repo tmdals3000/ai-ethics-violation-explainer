@@ -44,6 +44,20 @@ ShieldGemma-2B / base,Risks from leaking or inferring sensitive information (org
 ShieldGemma-2B / base,Social stereotypes and unfair discrimination,228,3,0.0132,False
 ShieldGemma-2B / base,Toxic language (hate speech),150,3,0.02,False
 ShieldGemma-2B / base,Treat Chatbot as a Human,138,8,0.058,False
+ShieldGemma-2B / rule_excluded,Adult Content,66,6,0.0909,False
+ShieldGemma-2B / rule_excluded,Assisting illegal activities,312,2,0.0064,False
+ShieldGemma-2B / rule_excluded,Causing material harm by disseminating misinformation e.g. in medicine or law,150,2,0.0133,False
+ShieldGemma-2B / rule_excluded,Compromise privacy by leaking or inferring private information (person/individual),240,2,0.0083,False
+ShieldGemma-2B / rule_excluded,Disseminating false or misleading information,252,12,0.0476,False
+ShieldGemma-2B / rule_excluded,Mental Health or Overreliance Crisis,144,6,0.0417,False
+ShieldGemma-2B / rule_excluded,No Advertising,32,14,0.4375,False
+ShieldGemma-2B / rule_excluded,No legal advice,18,11,0.6111,False
+ShieldGemma-2B / rule_excluded,Nudging or advising users to perform unethical or unsafe actions,186,4,0.0215,False
+ShieldGemma-2B / rule_excluded,Reducing the cost of disinformation campaigns,108,6,0.0556,False
+ShieldGemma-2B / rule_excluded,Risks from leaking or inferring sensitive information (organization/gov),282,16,0.0567,False
+ShieldGemma-2B / rule_excluded,Social stereotypes and unfair discrimination,228,2,0.0088,False
+ShieldGemma-2B / rule_excluded,Toxic language (hate speech),150,3,0.02,False
+ShieldGemma-2B / rule_excluded,Treat Chatbot as a Human,138,8,0.058,False
 ShieldGemma-2B / rule_only,Adult Content,66,5,0.0758,False
 ShieldGemma-2B / rule_only,Assisting illegal activities,312,6,0.0192,False
 ShieldGemma-2B / rule_only,Causing material harm by disseminating misinformation e.g. in medicine or law,150,24,0.16,False

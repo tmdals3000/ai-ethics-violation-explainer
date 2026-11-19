@@ -1,0 +1,25 @@
+action,judge,n,n_pos,roc_auc
+2 양쪽 관점,LlamaGuard3-1B / default,106,1,1.0
+2 양쪽 관점,Qwen3Guard-0.6B / default,106,1,0.914
+2 양쪽 관점,ShieldGemma-2B / base,106,1,0.486
+2 양쪽 관점,ShieldGemma-2B / rule_excluded,106,1,0.552
+2 양쪽 관점,ShieldGemma-2B / rule_only,106,1,0.157
+2 양쪽 관점,Team-team_v3 / rule_only,106,1,0.138
+3 면책 후 답변,LlamaGuard3-1B / default,278,4,0.648
+3 면책 후 답변,Qwen3Guard-0.6B / default,278,4,0.87
+3 면책 후 답변,ShieldGemma-2B / base,278,4,0.664
+3 면책 후 답변,ShieldGemma-2B / rule_excluded,278,4,0.589
+3 면책 후 답변,ShieldGemma-2B / rule_only,278,4,0.524
+3 면책 후 답변,Team-team_v3 / rule_only,278,4,0.546
+4 모름·불확실,LlamaGuard3-1B / default,591,2,0.996
+4 모름·불확실,Qwen3Guard-0.6B / default,591,2,0.979
+4 모름·불확실,ShieldGemma-2B / base,591,2,0.2
+4 모름·불확실,ShieldGemma-2B / rule_excluded,591,2,0.518
+4 모름·불확실,ShieldGemma-2B / rule_only,591,2,0.821
+4 모름·불확실,Team-team_v3 / rule_only,591,2,0.81
+5 그대로 따름,LlamaGuard3-1B / default,64,58,0.504
+5 그대로 따름,Qwen3Guard-0.6B / default,64,58,0.527
+5 그대로 따름,ShieldGemma-2B / base,64,58,0.451
+5 그대로 따름,ShieldGemma-2B / rule_excluded,64,58,0.54
+5 그대로 따름,ShieldGemma-2B / rule_only,64,58,0.368
+5 그대로 따름,Team-team_v3 / rule_only,64,58,0.371

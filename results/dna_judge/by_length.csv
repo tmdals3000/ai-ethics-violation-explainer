@@ -1,0 +1,25 @@
+judge,length_bin,n,human_violation_rate,pred_violation_rate,false_positive_rate,error_rate
+LlamaGuard3-1B / default,짧음(1/4),566,0.0053,0.0018,0.0018,0.0071
+LlamaGuard3-1B / default,2/4,573,0.0105,0.0017,0.0018,0.0122
+LlamaGuard3-1B / default,3/4,558,0.0233,0.0108,0.0092,0.0305
+LlamaGuard3-1B / default,김(4/4),559,0.0769,0.0733,0.064,0.1216
+Qwen3Guard-0.6B / default,짧음(1/4),566,0.0053,0.0018,0.0018,0.0071
+Qwen3Guard-0.6B / default,2/4,573,0.0105,0.0052,0.0035,0.0122
+Qwen3Guard-0.6B / default,3/4,558,0.0233,0.0143,0.0092,0.0269
+Qwen3Guard-0.6B / default,김(4/4),559,0.0769,0.0626,0.0407,0.0894
+ShieldGemma-2B / base,짧음(1/4),566,0.0053,0.0,0.0,0.0053
+ShieldGemma-2B / base,2/4,573,0.0105,0.0035,0.0018,0.0105
+ShieldGemma-2B / base,3/4,558,0.0233,0.0108,0.011,0.0341
+ShieldGemma-2B / base,김(4/4),559,0.0769,0.059,0.0446,0.1002
+ShieldGemma-2B / rule_excluded,짧음(1/4),566,0.0053,0.0,0.0,0.0053
+ShieldGemma-2B / rule_excluded,2/4,573,0.0105,0.0,0.0,0.0105
+ShieldGemma-2B / rule_excluded,3/4,558,0.0233,0.0054,0.0055,0.0287
+ShieldGemma-2B / rule_excluded,김(4/4),559,0.0769,0.0125,0.0078,0.0787
+ShieldGemma-2B / rule_only,짧음(1/4),566,0.0053,0.0,0.0,0.0053
+ShieldGemma-2B / rule_only,2/4,573,0.0105,0.007,0.0053,0.014
+ShieldGemma-2B / rule_only,3/4,558,0.0233,0.009,0.0092,0.0323
+ShieldGemma-2B / rule_only,김(4/4),559,0.0769,0.0716,0.0543,0.1055
+Team-team_v3 / rule_only,짧음(1/4),566,0.0053,0.0,0.0,0.0053
+Team-team_v3 / rule_only,2/4,573,0.0105,0.0035,0.0018,0.0105
+Team-team_v3 / rule_only,3/4,558,0.0233,0.0018,0.0018,0.0251
+Team-team_v3 / rule_only,김(4/4),559,0.0769,0.0394,0.0233,0.0805

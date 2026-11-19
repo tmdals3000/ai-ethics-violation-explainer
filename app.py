@@ -33,7 +33,7 @@ def load():
     coords = pd.read_csv("coords.csv")
     tau_sweep = pd.read_csv("results/p1_tau_sweep.csv")
     bc = pd.read_csv("base_candidates.csv") if os.path.exists("base_candidates.csv") else None
-    extra = {n: pd.read_csv(f"results/{n}.csv") for n in ["p4_base_vs_rule_only", "p4_team_prompt_comparison"]
+    extra = {n: pd.read_csv(f"results/{n}.csv") for n in ["p4_base_vs_rule_only", "p4_team_prompt_comparison", "p4_rule_excluded_by_rule"]
              if os.path.exists(f"results/{n}.csv")}
     return df, rules, sim, wide, thr, coords, tau_sweep, bc, extra
 
@@ -279,7 +279,7 @@ with tab3:
     k = c2.slider("규칙 찾기 문제 기준: 정답 규칙이 상위 몇 개 후보 안에 없으면?", 1, 10, TOP_K)
     g3 = view[(view.source == p3_src) & (view.gold != "")]
     m3 = g3[["text_id", "human_harmful"]].reset_index(drop=True)
-    js3 = [jc for jc in judges if len(g3) and wide.loc[g3.text_id, jc].notna().all()]
+    js3 = [jc for jc in judges if len(g3) and wide.loc[g3.text_id, jc].notna().all() and not jc.endswith("rule_excluded")]
     for jc in js3:
         m3[jc] = wide.loc[m3.text_id, jc].values
     gold_in_topk = {r.text_id: r.gold in tree.bfs(sim.loc[r.text_id], r.source, tau)[0][:k] for r in g3.itertuples()}
@@ -356,6 +356,13 @@ with tab4:
         e["source"] = e.source.map(SRC_NAME)
         st.dataframe(e.round(3), hide_index=True, width="stretch")
         st.caption("AUC 변화가 양수 = 정답 규칙을 주면 좋아짐 → 규칙 찾기를 고치면 효과가 있음")
+    if "p4_rule_excluded_by_rule" in extra:
+        st.subheader("처음 보는 규칙 실험 — 규칙별 AUC (ShieldGemma)")
+        rx = extra["p4_rule_excluded_by_rule"].copy()
+        rx["source"] = rx.source.map(SRC_NAME)
+        st.dataframe(rx.round(3), hide_index=True, width="stretch")
+        st.caption("규칙 제외 = 정답 규칙(과 같은 위해 유형)을 후보에서 뺐을 때 · 하락폭 = 기본 − 규칙 제외 · "
+                   "회복폭 = 규칙 문장만 − 규칙 제외 · 위반(n_pos)이 적은 규칙은 AUC 가 불안정해요")
     if "p4_team_prompt_comparison" in extra:
         st.subheader("② 팀 판정기 원칙 문장 수정 전후 (DNA dev 300개, '규칙 문장만')")
         tp = extra["p4_team_prompt_comparison"]

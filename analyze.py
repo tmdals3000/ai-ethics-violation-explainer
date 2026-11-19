@@ -75,8 +75,9 @@ for s, g in p1.groupby("source"):
 # 2) 판정 결과 모으기 (1차 + 2차)
 # ---------------------------------------------------------------
 parts = [pd.read_csv("judgments.csv")]
-if os.path.exists("judgments_new.csv"):
-    parts.append(pd.read_csv("judgments_new.csv"))
+for extra_file in ["judgments_new.csv", "judgments_derived.csv"]:     # 2차 Colab, '규칙 제외'(derive_conditions.py)
+    if os.path.exists(extra_file):
+        parts.append(pd.read_csv(extra_file)[["text_id", "judge", "condition", "p_violation"]])
 j = pd.concat(parts, ignore_index=True)
 j = j[j["text_id"].isin(df["text_id"])].drop_duplicates(["text_id", "judge", "condition"], keep="last")
 j["judge_cond"] = j["judge"] + " / " + j["condition"]
@@ -159,7 +160,7 @@ coords = pd.read_csv("coords.csv")
 diag = []
 for s, g in df[df.gold != ""].groupby("source"):
     m = g[["text_id", "human_harmful"]].merge(wide, left_on="text_id", right_index=True)
-    js = [c for c in wide.columns if m[c].notna().all()]
+    js = [c for c in wide.columns if m[c].notna().all() and not c.endswith("rule_excluded")]   # 실험용 조건은 진단에서 뺌
     d = diagnose(m, js, {jc: TH[(jc, s)] for jc in js}, gold_in_topk, base_argmax, gold_rule)
     diag.append(d.assign(source=s))
 diag = pd.concat(diag).merge(coords, on="text_id", how="left")
@@ -188,6 +189,25 @@ for s in p2.source.unique():
                         "auc_change": t.loc[gold_j, "roc_auc"] - t.loc[base_j, "roc_auc"],
                         "prauc_base": t.loc[base_j, "pr_auc"], "prauc_rule_only": t.loc[gold_j, "pr_auc"]})
 pd.DataFrame(eff).round(4).to_csv("results/p4_base_vs_rule_only.csv", index=False)
+
+# (d) 처음 보는 규칙 실험: 규칙(DNA 위해 유형 12개, Jigsaw 규칙 2개)별 AUC
+#     하락폭 = 기본 − 규칙 제외, 회복폭 = 규칙 문장만 − 규칙 제외 (PDF P4 지표)
+cond = {"base": "ShieldGemma-2B / base", "rule_excluded": "ShieldGemma-2B / rule_excluded",
+        "rule_only": "ShieldGemma-2B / rule_only"}
+if all(c in wide.columns for c in cond.values()):
+    rows = []
+    g_all = df[df.source.isin(["do_not_answer", "jigsaw"])].merge(wide[list(cond.values())], left_on="text_id", right_index=True)
+    for (s, unit), g in g_all.groupby(["source", "gold_l2"]):
+        r = {"source": s, "excluded_rule": tree.name.get(unit, unit), "n": len(g), "n_pos": int(g.human_harmful.sum())}
+        for k, c in cond.items():
+            r[f"auc_{k}"] = roc_auc_score(g.human_harmful, g[c]) if g.human_harmful.nunique() > 1 else np.nan
+        r["auc_drop"] = r["auc_base"] - r["auc_rule_excluded"]
+        r["auc_recovery_rule_only"] = r["auc_rule_only"] - r["auc_rule_excluded"]
+        rows.append(r)
+    rx = pd.DataFrame(rows).round(4)
+    rx.to_csv("results/p4_rule_excluded_by_rule.csv", index=False)
+    print("\nP4 처음 보는 규칙 실험 (ShieldGemma, 규칙별 AUC · 위반이 2개 이상인 규칙만 의미 있음):")
+    print(rx[rx.n_pos >= 2].to_string(index=False))
 if os.path.exists("team_prompt_comparison.csv"):
     pd.read_csv("team_prompt_comparison.csv").to_csv("results/p4_team_prompt_comparison.csv", index=False)
 flips = []

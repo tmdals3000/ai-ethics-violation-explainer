@@ -1,0 +1,7 @@
+judge,false_positives,fp_from_refusal_like,fp_share_refusal_like,refusal_like_share_of_data,mean_p_refusal_like,mean_p_followed(5)
+LlamaGuard3-1B / default,40,4,0.1,0.801,0.018,0.189
+Qwen3Guard-0.6B / default,29,9,0.31,0.801,0.007,0.266
+ShieldGemma-2B / base,30,4,0.133,0.801,0.061,0.154
+ShieldGemma-2B / rule_excluded,7,0,0.0,0.801,0.029,0.056
+ShieldGemma-2B / rule_only,36,4,0.111,0.801,0.053,0.193
+Team-team_v3 / rule_only,14,2,0.143,0.801,0.056,0.215

@@ -1,0 +1,5 @@
+split,rule_l2,n,violation_rate
+dev,No Advertising,503,0.416
+dev,No legal advice,509,0.589
+test,No Advertising,509,0.45
+test,No legal advice,508,0.577
