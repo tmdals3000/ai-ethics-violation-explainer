@@ -37,6 +37,10 @@ flowchart LR
     end
 ```
 
+## 분석 결과
+
+- [판정 분석·프롬프팅 요약](docs/analysis/analysis_summary.md): 데이터 구성, 모델별 성능, 오류가 몰리는 곳, 규칙 문장 수정(③) 결과
+
 ## 시스템 화면
 
 | P1 규칙 찾기 | P2 판정 비교 |
