@@ -105,7 +105,7 @@ python scripts\spark_judge.py --sources dna jigsaw prosocial --split dev --n 300
 | ShieldGemma-2B | 받음 | 다음 단어가 `Yes`일 확률 (Yes·No 두 개만 softmax, float32) |
 
 - ShieldGemma 프롬프트는 문자열을 직접 쓰지 않고 **토크나이저에 내장된 공식 채팅 템플릿**(`apply_chat_template(..., guideline=정책)`)을 호출해 공식 형식과 글자까지 일치합니다. 마지막 메시지가 assistant면 응답 판정, user면 텍스트 판정 형식이 자동으로 선택됩니다.
-- 정책 문장: 정답 규칙이 있으면 '규칙 문장만' 조건(`rule_only`), ProsocialDialog처럼 없으면 일반 정책(`generic`).
+- 정책 문장: 정답 규칙이 있으면 '규칙 문장만' 조건(`rule_only`). ProsocialDialog처럼 정답 규칙이 없으면 여기서는 판정하지 않고, 규칙 트리에서 찾은 상위 5개 후보로 '기본' 조건만 판정합니다 (일반 정책·ShieldGemma 공식 정책 4개는 규칙 찾기를 건너뛰므로 쓰지 않음).
 - 판정 결과 형식: `text_id, model, condition, p_violation, human_label`
 
 **팀 판정기 (ShieldGemma-2B, 가중치는 그대로 두고 정책 부분만 바꿈)**

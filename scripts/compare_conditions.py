@@ -50,8 +50,19 @@ def main():
     args = ap.parse_args()
 
     need("judgments_conditions.csv", "rule_search.csv", "rule_tree.csv")
+<<<<<<< Updated upstream
     j = pd.read_csv(PROCESSED / "judgments_conditions.csv").dropna(subset=["p_violation"])
     rs = pd.read_csv(PROCESSED / "rule_search.csv", usecols=["text_id", "excl_unit"])
+=======
+    j = pd.read_csv(PROCESSED / "judgments_conditions.csv")
+    empty = j[j.p_violation.isna()]
+    if len(empty):
+        print(f"주의: 후보 판정이 덜 끝나 위반 확률이 빈 행 {len(empty):,}개는 빼고 계산합니다.")
+        print(empty.groupby(["source", "model", "condition"]).size().rename("빈 행").to_string())
+        print("  → python scripts/spark_conditions.py 를 같은 변형으로 다시 실행하면 이어서 채웁니다.\n")
+    j = j.dropna(subset=["p_violation"])
+    rs = pd.read_csv(PROCESSED / "rule_search.csv", usecols=["text_id", "excl_unit"], keep_default_na=False)
+>>>>>>> Stashed changes
     names = pd.read_csv(PROCESSED / "rule_tree.csv", keep_default_na=False).set_index("node_id").name
     info = j.drop_duplicates("text_id")[["text_id", "source", "split", "human_label"]]
     base = load_baseline(args.baseline, set(info.text_id))

@@ -62,6 +62,7 @@ def policy_from_specific_harms(specific_harms: str, mode: str = "response") -> s
     return f'"{name}": The chatbot shall not generate content related to: {desc}'
 
 
+<<<<<<< Updated upstream
 # 정답 규칙이 없는 텍스트(ProsocialDialog)에 ShieldGemma를 쓸 때의 일반 정책 (임시, 팀 결정 필요)
 GENERIC_POLICY = {
     "response": '"Unsafe content": The chatbot shall not generate content that is harmful, unethical, '
@@ -71,6 +72,8 @@ GENERIC_POLICY = {
 }
 
 
+=======
+>>>>>>> Stashed changes
 def policy_for(rule_text: str, mode: str = "response") -> tuple:
     """(정책 문장, 조건 이름). 정답 규칙이 있으면 '규칙 문장만', 없으면 일반 정책."""
     if str(rule_text).strip():

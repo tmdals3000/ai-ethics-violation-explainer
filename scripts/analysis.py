@@ -149,9 +149,12 @@ def source_metrics(judg: pd.DataFrame, thresholds: dict, by=("source", "model", 
 
 
 def auc_or_nan(p, y):
+    """ROC-AUC. 위반 확률이 빈 텍스트(판정이 덜 끝난 조건)는 빼고 계산, 한쪽 라벨만 남으면 nan."""
     from sklearn.metrics import roc_auc_score
-    y = np.asarray(y, int)
-    return roc_auc_score(y, p) if len(np.unique(y)) == 2 else np.nan
+    p, y = np.asarray(p, float), np.asarray(y, float)
+    ok = ~(np.isnan(p) | np.isnan(y))
+    p, y = p[ok], y[ok].astype(int)
+    return roc_auc_score(y, p) if len(y) and len(np.unique(y)) == 2 else np.nan
 
 
 # ---------------------------------------------------------------- 4가지 조건 묶기

@@ -91,9 +91,25 @@ svg text{font-family:inherit}
 .steps li{margin:2px 0}
 .steps li.hit{font-weight:600}
 .status{font-size:12px}
+.detnav{display:flex;flex-direction:column;gap:4px;margin:0 0 8px}.detnav button{text-align:left;font-size:12px}
+.changes{font-size:12.5px;margin:6px 0 0;display:flex;flex-wrap:wrap;gap:6px;align-items:center}.changes:empty{display:none}
 .mono{font-family:ui-monospace,Consolas,monospace;font-size:12px}
 .slider{display:flex;align-items:center;gap:8px;font-size:12.5px}
 .slider input[type=range]{width:180px}
+<<<<<<< Updated upstream
+=======
+.step{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;font-size:12px;margin-right:8px}
+.rgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.rcard{text-align:left;display:flex;flex-direction:column;gap:6px;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);min-width:0}
+.rcard.on{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.rhead{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.rtext{font-size:12.5px;color:var(--muted);white-space:pre-wrap;overflow-wrap:anywhere}
+.rbar{display:flex;justify-content:space-between;align-items:center;font-size:11.5px;gap:6px}
+.gloss{margin-top:10px;font-size:12.5px}.gloss dt{font-weight:600;margin-top:6px}.gloss dd{margin:2px 0 0 0;color:var(--muted)}
+tr.focus td{background:var(--accent-soft);font-weight:600}
+.rbar.focus{font-weight:600;background:var(--accent-soft);border-radius:4px}
+button.link{border:0;background:none;color:var(--accent);padding:0;text-decoration:underline;font-size:12px}
+>>>>>>> Stashed changes
 </style>
 </head>
 <body>
@@ -112,6 +128,7 @@ svg text{font-family:inherit}
     <label>임계값 기준 <select id="fThr"><option value="kappa">dev κ 최대</option><option value="f1">dev F1 최대</option></select></label>
     <span class="status" id="srv"></span>
   </div>
+  <div class="changes" id="changes"></div>
   <nav class="tabs" id="tabs">
     <button class="tab" data-t="p1">P1 규칙 찾기</button>
     <button class="tab" data-t="p2">P2 판정 비교</button>
@@ -205,6 +222,30 @@ function bfs(src, sim, tau, start = 2, exclude = null, boost = null) {
   leaves.sort((a, b) => sc(b) - sc(a));
   return {leaves, ncmp, kept, compared, fb, sc};
 }
+<<<<<<< Updated upstream
+=======
+function candidates(src, sim, tau, start = 2, k = 5, exclude = null, boost = null) {
+  // 공식 '기본' 조건 후보: 유사도 상위 k개 규칙과 각 규칙이 BFS에서 τ를 넘었는지 (시작 단계부터 경로 전체 ≥ τ)
+  const t = TREE[src], ex = new Set();
+  if (exclude) for (const n of exclude) t.leavesUnder(n).forEach(l => ex.add(l));
+  const add = new Map();
+  if (boost && boost.node && boost.v) { const st = [boost.node]; while (st.length) { const n = st.pop(); add.set(n, boost.v); st.push(...t.children[n]); } }
+  const sc = n => sim(n) + (add.get(n) || 0), lv0 = Math.min(start, t.maxLv);
+  return t.leaves.filter(l => !ex.has(l)).sort((a, b) => sc(b) - sc(a)).slice(0, k)
+    .map(l => [l, t.path(l).filter(n => t.level[n] >= lv0).every(n => sc(n) >= tau)]);
+}
+function finalProb(ps, passed) {                 // τ를 넘은 후보의 최댓값, 없으면 상위 1개 후보의 값
+  if (!ps.length) return NaN;
+  const got = ps.filter((_, k) => passed[k]);
+  return got.length ? Math.max(...got) : ps[0];
+}
+const CAND = new Map();
+function candOf(i) {                              // 지금 설정(τ·우선순위)의 상위 5개 후보와 τ 통과 여부
+  if (!CAND.has(i)) { const s = treeOf(TX.src[i]); CAND.set(i, candidates(s, simOf(i), S.tau[s], D.meta.start_level || 2, TOP, null, boostOf(s))); }
+  return CAND.get(i);
+}
+const vlabel = v => (D.meta.variant_info && D.meta.variant_info[v] ? D.meta.variant_info[v].what : v);
+>>>>>>> Stashed changes
 function searchOne(i, tau, start, opts = {}) {     // rule_search.py의 한 행
   const src = TX.src[i], t = TREE[src], sim = simOf(i, opts.edit);
   if (!sim) return null;
@@ -270,30 +311,71 @@ function bestThr(p, y, crit) {                    // common.best_f1_threshold / 
 
 // ======================================================================= 상태
 const S = {
+<<<<<<< Updated upstream
   tab: 'p1', sel: null, testOpen: false,
   f: {src: 'all', split: 'dev', rule: 'all', model: 'team', result: 'all'},
   cond: 'base', team: D.meta.variants.includes('team_v3') ? 'team_v3' : D.meta.variants[D.meta.variants.length - 1], thrBy: 'kappa',
   p1: {src: 'dna', tau: {...D.meta.tau}, start: D.meta.start_level || 2, mode: 'sim', k: 1, node: null},
+=======
+  tab: 'flow', sel: null, hist: [], base: null, testOpen: false,
+  fl: {src: 'dna', q: null, onlyWrong: false},
+  f: {src: 'all', split: 'dev', rule: 'all', model: 'team', result: 'all'},
+  tau: {...D.meta.tau}, boost: {}, thrOv: {},     // 모든 페이지가 함께 쓰는 '바꾼 설정' (기본 조건에 적용)
+  cond: 'base', team: ['team_rule', 'team_v3'].find(v => D.meta.variants.includes(v)) || D.meta.variants[0], thrBy: 'f1',
+  p1: {src: 'dna', start: D.meta.start_level || 2, mode: 'sim', k: 1, node: null},
+>>>>>>> Stashed changes
   p2: {group: 'rule', a: 'llamaguard', b: 'team', cell: null},
   p3: {model: 'team', k: TOP, cause: null, brush: null},
-  p4: {model: 'team', src: 'dna', thr: null, tau: null, bnode: '', bv: 0, unit: null, rule: null, edit: null, busy: false},
+  p4: {model: 'team', src: 'dna', unit: null, rule: null, edit: null, busy: false},
   server: false,
 };
 try { const t = localStorage.getItem('sys_tab'); if (t) S.tab = t; } catch (e) {}
 
 const realModel = m => m === 'team' ? S.team : m;
-function pOf(m, cond, i) {
+function pOrig(m, cond, i) {                     // 저장된 판정 (원래 τ·우선순위)
   const k = realModel(m), J = D.judg[k];
   if (!J) return null;
   const arr = RULE_FREE.has(m) ? J.none : J[cond];
   return arr ? arr[i] : null;
 }
+// ---- 바꾼 설정: P1·P4에서 바꾼 τ·우선순위·임계값을 모든 페이지에 똑같이 적용 (기본 조건만)
+const boostOf = s => (S.boost[s] && S.boost[s].node && S.boost[s].v) ? S.boost[s] : null;
+const tauChanged = s => Math.abs(S.tau[s] - D.meta.tau[s]) > 1e-9;
+const srcChanged = s => tauChanged(s) || !!boostOf(s);
+const thrKey = (src, m) => src + '|' + realModel(m);
+function settingsChanged() { CAND.clear(); ADJ.clear(); BASE_RS.clear(); P1C.clear(); }
+const ADJ = new Map();
+function pOf(m, cond, i) {                       // 지금 설정의 위반 확률
+  const v0 = pOrig(m, cond, i);
+  if (v0 == null || cond !== 'base' || RULE_FREE.has(m)) return v0;
+  const s = treeOf(TX.src[i]);
+  if (!srcChanged(s)) return v0;
+  const key = realModel(m) + '|' + i;
+  if (ADJ.has(key)) return ADJ.get(key);
+  const cache = D.cache[variantOf(m)] || {}, ps = [], pass = [];
+  let v = null;
+  for (const [leaf, ok] of candOf(i)) { const c = cache[TX.id[i] + '|' + leaf]; if (c == null) { ps.length = 0; break; } ps.push(c); pass.push(ok); }
+  if (ps.length) v = finalProb(ps, pass);            // 새로 상위 5개에 든 후보 판정이 없으면 '판정 없음'
+  ADJ.set(key, v); return v;
+}
+const DEG = new Map();
+function degen(src, m, cond) {                   // 임계값이 dev 텍스트의 95% 이상을 한쪽으로 판정하면 그 비율 (아니면 null)
+  const key = [src, realModel(m), RULE_FREE.has(m) ? 'none' : cond, S.thrBy, S.thrOv[thrKey(src, m)] ?? ''].join('|');
+  if (!DEG.has(key)) {
+    const t = thrOf(src, m, cond); let n = 0, pos = 0;
+    for (let i = 0; i < N; i++) if (TX.src[i] === src && TX.split[i] === 'dev') { const v = pOrig(m, cond, i); if (v != null) { n++; pos += v >= t; } }
+    const r = n ? pos / n : NaN; DEG.set(key, n && (r >= 0.95 || r <= 0.05) ? r : null);
+  }
+  return DEG.get(key);
+}
 const THR = new Map();
-function thrOf(src, m, cond) {                    // dev에서 고른 임계값 (필터와 상관없이 고정)
-  const c = RULE_FREE.has(m) ? 'none' : cond, key = [src, realModel(m), c, S.thrBy].join('|');
+function thrOf(src, m, cond, orig = false) {      // dev에서 고른 임계값 (원래 판정 기준, 필터와 상관없이 고정). P4에서 직접 바꾸면 그 값
+  const c = RULE_FREE.has(m) ? 'none' : cond;
+  if (!orig && c === 'base' && S.thrOv[thrKey(src, m)] != null) return S.thrOv[thrKey(src, m)];
+  const key = [src, realModel(m), c, S.thrBy].join('|');
   if (!THR.has(key)) {
     const p = [], y = [];
-    for (let i = 0; i < N; i++) if (TX.src[i] === src && TX.split[i] === 'dev') { const v = pOf(m, cond, i); if (v != null) { p.push(v); y.push(TX.y[i]); } }
+    for (let i = 0; i < N; i++) if (TX.src[i] === src && TX.split[i] === 'dev') { const v = pOrig(m, cond, i); if (v != null) { p.push(v); y.push(TX.y[i]); } }
     THR.set(key, p.length ? bestThr(p, y, S.thrBy) : 0.5);
   }
   return THR.get(key);
@@ -324,7 +406,11 @@ const label = y => y ? '<span class="chip v">위반</span>' : '<span class="chip
 // 기본 τ의 BFS 결과 (P3 원인 1의 '정답 순위', P4 비교 기준)
 const BASE_RS = new Map();
 function baseSearch(i) {
+<<<<<<< Updated upstream
   if (!BASE_RS.has(i)) BASE_RS.set(i, searchOne(i, D.meta.tau[TX.src[i]], D.meta.start_level || 2));
+=======
+  if (!BASE_RS.has(i)) { const s = treeOf(TX.src[i]); BASE_RS.set(i, searchOne(i, S.tau[s], D.meta.start_level || 2, {boost: boostOf(s)})); }
+>>>>>>> Stashed changes
   return BASE_RS.get(i);
 }
 
@@ -339,17 +425,52 @@ function initFilters() {
   if (D.meta.splits.includes('test')) { $('testWrap').hidden = false; $('fSplit').innerHTML += '<option value="test">test</option><option value="all">dev + test</option>'; }
   fillRuleFilter();
   const on = (id, fn) => $(id).addEventListener('change', e => { fn(e.target); render(); });
-  on('fSrc', el => { S.f.src = el.value; S.f.rule = 'all'; fillRuleFilter(); if (el.value === 'dna' || el.value === 'jigsaw') { S.p1.src = el.value; S.p4.src = el.value; } });
+  on('fSrc', el => { S.f.src = el.value; S.f.rule = 'all'; fillRuleFilter(); if (TREE[treeOf(el.value)]) setTree(treeOf(el.value), false); });
   on('fSplit', el => { S.f.split = el.value; });
   on('fTest', el => { S.testOpen = el.checked; });
-  on('fRule', el => { S.f.rule = el.value; });
-  on('fModel', el => { S.f.model = el.value; });
+  on('fRule', el => { S.f.rule = el.value;
+    const nd = el.value !== 'all' ? NODE.get(el.value) : null;
+    if (nd && TREE[nd.src]) { setTree(nd.src, false); S.p4.unit = el.value; S.p1.node = el.value; } });   // 고른 규칙의 트리로 P1·P4를 맞춘 뒤 노드 선택   // 고른 규칙 → P1 노드·P4 '처음 보는 규칙'
+  on('fModel', el => setModel(el.value));
   on('fResult', el => { S.f.result = el.value; });
   on('fCond', el => { S.cond = el.value; });
-  on('fTeam', el => { S.team = el.value; });
-  on('fThr', el => { S.thrBy = el.value; });
+  on('fTeam', el => { S.team = el.value; S.p4.edit = null; settingsChanged(); });
+  on('fThr', el => { S.thrBy = el.value; S.thrOv = {}; settingsChanged(); });   // 기준을 바꾸면 직접 지정한 임계값은 풀림
   document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => { S.tab = b.dataset.t; try { localStorage.setItem('sys_tab', S.tab); } catch (e) {} render(); }));
   $('modal').addEventListener('click', e => { if (e.target.id === 'modal') $('modal').classList.remove('on'); });
+}
+// ---- 페이지끼리 맞추는 함수: 어느 페이지에서 바꿔도 같은 함수를 거침
+function setTree(t, syncFilter = true) {          // 트리(출처): 상단 출처 · P1 트리 · P4 출처
+  if (S.p1.src !== t) S.p1.node = null;
+  S.p1.src = t; S.p4.src = t;
+  if (syncFilter && S.f.src !== 'all' && treeOf(S.f.src) !== t) { S.f.src = t; $('fSrc').value = t; S.f.rule = 'all'; fillRuleFilter(); }
+  if (S.sel != null && treeOf(TX.src[S.sel]) !== t && syncFilter) S.sel = null;
+}
+function setModel(m) {                            // 판정 모델: 상단 · P2 산점도 y · P3 · P4(규칙을 받는 모델만)
+  S.f.model = m; $('fModel').value = m; S.p3.model = m; S.p2.b = m;
+  if (['shieldgemma', 'team'].includes(m)) S.p4.model = m;
+}
+function setTau(src, v) { S.tau[src] = v; settingsChanged(); }
+function setBoost(src, node, v) { S.boost[src] = {node, v: node ? v : 0}; settingsChanged(); }
+function setThr(src, m, v) { if (v == null) delete S.thrOv[thrKey(src, m)]; else S.thrOv[thrKey(src, m)] = v; settingsChanged(); }
+function resetSettings(src) {                     // src 없으면 전부
+  for (const s of src ? [src] : Object.keys(S.tau)) { S.tau[s] = D.meta.tau[s]; delete S.boost[s]; }
+  for (const k of Object.keys(S.thrOv)) if (!src || k.startsWith(src + '|')) delete S.thrOv[k];
+  settingsChanged();
+}
+function renderChanges() {                        // 상단: 지금 바꿔 둔 설정 (모든 페이지에 적용 중)
+  const items = [];
+  for (const s of Object.keys(S.tau)) {
+    if (tauChanged(s)) items.push(`${SRCNAME[s]} τ ${S.tau[s].toFixed(3)} <span class="hint">(원래 ${D.meta.tau[s].toFixed(3)})</span>`);
+    const b = boostOf(s); if (b) items.push(`${SRCNAME[s]} 우선순위 ${esc(short(nname(b.node), 24))} ${b.v > 0 ? '+' : ''}${b.v.toFixed(3)}`);
+  }
+  for (const [k, v] of Object.entries(S.thrOv)) { const [s, m] = k.split('|'); items.push(`${SRCNAME[s]} ${esc(m)} 임계값 ${(+v).toFixed(4)}`); }
+  if (Object.keys(S.tau).some(boostOf)) {           // 우선순위를 바꾸면 새로 상위 5개에 든 규칙의 판정이 없을 수 있음
+    let miss = 0; for (const m of ['shieldgemma', 'team']) for (let i = 0; i < N; i++) if (pOrig(m, 'base', i) != null && pOf(m, 'base', i) == null) miss++;
+    if (miss) items.push(`<b>판정 없음 ${miss}건</b> <span class="hint">(새 후보 규칙 판정이 없어 계산에서 빠짐 · P4에서 서버로 채우기)</span>`);
+  }
+  $('changes').innerHTML = items.length ? `<span class="chip bad">바꾼 설정 적용 중</span> ${items.join(' · ')} <span class="hint">(기본 조건, 모든 페이지)</span> <button id="resetAll" type="button">모두 되돌리기</button>` : '';
+  if ($('resetAll')) $('resetAll').onclick = () => { resetSettings(); render(); };
 }
 function fillRuleFilter() {
   const srcs = S.f.src === 'all' ? ['dna', 'jigsaw'] : [S.f.src];
@@ -357,7 +478,21 @@ function fillRuleFilter() {
   for (const s of srcs) if (TREE[s]) h += `<optgroup label="${SRCNAME[s]}">` + TREE[s].units.map(u => `<option value="${u}">${esc(short(nname(u), 50))}</option>`).join('') + '</optgroup>';
   $('fRule').innerHTML = h; $('fRule').value = S.f.rule;
 }
-function select(i) { S.sel = i; render(); }
+function pushHist(i) {                           // 이전 선택으로 돌아갈 수 있게 기록 (최근 20개)
+  if (S.sel != null && S.sel !== i) { S.hist = (S.hist || []).filter(x => x !== S.sel); S.hist.push(S.sel); if (S.hist.length > 20) S.hist.shift(); }
+  if (S.tab === 'flow' && i != null) S.base = i;   // 따라가기에서 고른 텍스트 = 기준 텍스트
+}
+function select(i, fromHist = false) {
+  if (!fromHist) pushHist(i);
+  S.sel = i;
+  // 고른 텍스트의 트리로 P1·P4를 맞춤 (Jigsaw 텍스트 → Jigsaw 트리, DNA·ProsocialDialog 텍스트 → DNA 트리)
+  if (i != null && TREE[treeOf(TX.src[i])]) {
+    setTree(treeOf(TX.src[i]), false);
+    if (TX.unit[i]) S.p4.unit = TX.unit[i];                                    // P4 '처음 보는 규칙' = 이 텍스트의 정답 중분류
+    if (!S.p4.busy) { const c = candOf(i); S.p4.rule = TX.gold[i] || (c[0] && c[0][0]) || S.p4.rule; }   // P4 '규칙 문장 편집' = 정답 규칙(없으면 찾은 1위)
+  }
+  render();
+}
 document.addEventListener('click', e => {
   const el = e.target.closest('[data-i]');
   if (el) { if (e.target.closest('#modal')) $('modal').classList.remove('on'); select(+el.dataset.i); }
@@ -368,21 +503,37 @@ function renderDetail() {
   if (i == null) { el.innerHTML = '<h2>원문 보기</h2><p class="hint">어느 뷰에서든 텍스트(행, 점, 막대 목록)를 누르면 여기에 원문과 맥락, 사람 라벨, 모델별 위반 확률이 나옵니다. 모든 뷰에서 같은 텍스트가 강조됩니다.</p>'; return; }
   const src = TX.src[i], ctxName = {dna: '질문', jigsaw: '서브레딧', prosocial: '앞선 대화'}[src];
   const harmful = TX.y[i] === 1;
+  const prev = (S.hist || []).length ? S.hist[S.hist.length - 1] : null;
+  const nav = (prev != null || (S.base != null && S.base !== i)) ? `<div class="detnav">${prev != null ? `<button type="button" id="dPrev">← 이전 텍스트 <span class="mono">${esc(TX.id[prev])}</span></button>` : ''}${S.base != null && S.base !== i ? `<button type="button" id="dBase">따라가기 텍스트로 <span class="mono">${esc(TX.id[S.base])}</span></button>` : ''}</div>` : '';
   let rows = '';
   for (const m of MODELS) {
     const p = pOf(m, S.cond, i); if (p == null) continue;
     const pr = p >= thrOf(src, m, S.cond) ? 1 : 0;
+<<<<<<< Updated upstream
     rows += `<tr><td><span class="dot" style="background:${MCOL[m]}"></span>${MNAME[m]}${m === 'team' ? ` <span class="hint">${S.team}</span>` : ''}</td><td class="n">${fmt(p)}</td><td class="n">${fmt(thrOf(src, m, S.cond))}</td><td>${pr === TX.y[i] ? '<span class="chip ok">맞음</span>' : '<span class="chip bad">틀림</span>'}</td></tr>`;
   }
   const rs = TREE[src] && TREE[src].rowOf ? baseSearch(i) : null;
   el.innerHTML = `<h2>원문 보기</h2>
+=======
+    rows += `<tr class="${m === S.f.model ? 'focus' : ''}"><td style="white-space:nowrap"><span class="dot" style="background:${MCOL[m]}"></span>${MNAME[m]} ${pr === TX.y[i] ? '<span class="chip ok">맞음</span>' : '<span class="chip bad">틀림</span>'}<br>${probBar(p, thrOf(src, m, S.cond), 200)}</td></tr>`;
+  }
+  const rs = TX.gold[i] && TREE[treeOf(src)] && TREE[treeOf(src)].rowOf ? baseSearch(i) : null;
+  const cd = TREE[treeOf(src)] && TREE[treeOf(src)].rowOf ? candOf(i) : null;
+  el.innerHTML = `<h2>원문 보기</h2>${nav}
+>>>>>>> Stashed changes
     <div class="mono">${esc(TX.id[i])}</div>
     <p>${SRCNAME[src]} · ${TX.split[i]} · 사람 라벨 ${label(TX.y[i])} ${TX.resp[i] ? '· 응답 ' + esc(TX.resp[i]) : ''}</p>
-    ${TX.gold[i] ? `<p class="hint">정답 규칙: <b>${esc(nname(TX.gold[i]))}</b>${rs ? `<br>찾은 1위: ${esc(nname(rs.top1))} (정답 순위 ${rs.goldRank ?? '없음'})` : ''}</p>` : ''}
+    ${TX.gold[i] && S.tab !== 'flow' ? `<p class="hint">정답 규칙: <b>${esc(nname(TX.gold[i]))}</b>${rs ? `<br>찾은 1위: ${esc(nname(rs.top1))} (정답 순위 ${rs.goldRank ?? '없음'})` : ''}</p>` : ''}
     <h3>${ctxName}</h3><div class="textbox">${esc(TX.ctx[i]) || '<span class="hint">없음</span>'}</div>
     <h3>판정 대상 ${harmful ? '<span class="hint">(위반 텍스트라 가려 둠, 누르면 보임)</span>' : ''}</h3>
     <div class="textbox ${harmful ? 'blur' : ''}">${esc(TX.text[i])}</div>
+<<<<<<< Updated upstream
     ${rows ? `<h3>모델별 위반 확률 (${CNAME[S.cond]} 조건)</h3><table><tr><th>모델</th><th class="n">p</th><th class="n">임계값</th><th></th></tr>${rows}</table>` : '<p class="hint">판정한 표본이 아닙니다 (규칙 찾기만 있음).</p>'}`;
+=======
+    ${S.tab === 'flow' ? '<p class="hint">찾은 규칙과 모델별 판정은 왼쪽 단계에 있습니다.</p>' : ''}
+    ${cd && S.tab !== 'flow' ? `<h3>찾은 후보 규칙 (유사도 상위 ${TOP}개)</h3><p>${cd.map(([l, ok], k) => `<span class="chip" title="${esc(NODE.get(l).text)}" style="${l === TX.gold[i] ? 'border-color:var(--viol);color:var(--viol)' : ''}">${k + 1}. ${esc(short(nname(l), 30))} ${ok ? '✓' : '·'}</span>`).join(' ')}</p><p class="hint">✓ = BFS에서 τ를 넘은 규칙${TX.gold[i] ? ' · 빨간 테두리 = 정답 규칙' : ''}</p>` : ''}
+    ${S.tab === 'flow' ? '' : rows ? `<h3>모델별 위반 확률 (${CNAME[S.cond]} 조건)</h3><table>${rows}</table><p class="hint">막대 = 위반 확률, 세로선 = 임계값. 선을 넘으면 위반으로 판정</p>` : '<p class="hint">판정한 표본이 아닙니다 (규칙 찾기만 있음).</p>'}`;   // 따라가기 탭에서는 원문만 (중복 줄임)
+>>>>>>> Stashed changes
 }
 function textRows(list, cols, limit = 60) {        // 텍스트 목록 표 (누르면 선택)
   const head = '<tr>' + cols.map(c => `<th class="${c.n ? 'n' : ''}">${c.h}</th>`).join('') + '</tr>';
@@ -390,27 +541,146 @@ function textRows(list, cols, limit = 60) {        // 텍스트 목록 표 (누�
   return `<div class="scroll"><table>${head}${body}</table></div>${list.length > limit ? `<p class="hint">${list.length}건 중 ${limit}건 표시</p>` : ''}`;
 }
 
+<<<<<<< Updated upstream
+=======
+
+// ======================================================================= 따라가기 (첫 화면): 텍스트 하나가 판정되기까지
+const digits = thr => thr < 0.001 ? 5 : thr < 0.01 ? 4 : thr < 0.1 ? 3 : 2;   // 임계값이 작으면 확률도 그만큼 자세히
+function probBar(p, thr, w = 150) {              // 소프트 예측: 확률 막대 + 임계값 선
+  if (p == null || Number.isNaN(p)) return '<span class="hint">–</span>';
+  const x = Math.max(0, Math.min(1, p)) * w, tx = Math.max(0, Math.min(1, thr)) * w, on = p >= thr, dg = digits(thr);
+  return `<svg width="${w + 62}" height="16" style="vertical-align:middle" aria-label="위반 확률 ${fmt(p, dg)}, 임계값 ${fmt(thr, dg)}"><title>위반 확률 ${fmt(p, dg)} / 임계값 ${fmt(thr, dg)} → ${on ? '위반' : '정상'}</title><rect x="0" y="4" width="${w}" height="8" rx="4" fill="var(--sunk)"/><rect x="0" y="4" width="${Math.max(x, 2)}" height="8" rx="4" fill="${on ? 'var(--viol)' : 'var(--safe)'}"/><line x1="${tx}" y1="0" x2="${tx}" y2="16" stroke="var(--ink)" stroke-width="1.5"/><text x="${w + 6}" y="12" font-size="11" fill="var(--ink)">${fmt(p, dg)}</text></svg>`;
+}
+function flowGroups(src) {                       // DNA는 질문 하나에 응답 6개, 나머지는 텍스트 하나
+  const g = new Map();
+  for (let i = 0; i < N; i++) {
+    if (TX.src[i] !== src || !TX.judged[i] || !inFilter(i)) continue;      // 판정 결과 필터까지 적용
+    const k = src === 'dna' ? TX.id[i].split('_')[1] : TX.id[i];
+    if (!g.has(k)) g.set(k, []);
+    g.get(k).push(i);
+  }
+  return g;
+}
+const anyWrong = i => MODELS.some(m => { const pr = predOf(m, S.cond, i); return pr != null && pr !== TX.y[i]; });
+const isFocus = m => m === S.f.model;               // 위쪽 '판정 모델'로 고른 모델을 강조
+function renderFlow() {
+  if (['dna', 'jigsaw', 'prosocial'].includes(S.f.src)) S.fl.src = S.f.src;     // 위 출처 필터를 따름
+  const avail = ['dna', 'jigsaw', 'prosocial'].filter(x => flowGroups(x).size);
+  if (!avail.includes(S.fl.src) && avail.length) S.fl.src = avail[0];
+  const src = S.fl.src, G = flowGroups(src);
+  let keys = [...G.keys()];
+  if (S.fl.onlyWrong) keys = keys.filter(k => G.get(k).some(anyWrong));
+  if (!keys.length) return `<div class="card"><h2>텍스트 하나가 판정되기까지</h2>
+    <p class="hint">지금 필터(출처·분할·규칙·판정 결과)에 맞는 판정한 텍스트가 없습니다. 위 필터를 '전체'로 바꾸거나 아래 체크를 풀어 보세요.</p>
+    <label class="slider"><input type="checkbox" id="flwrong" ${S.fl.onlyWrong ? 'checked' : ''}> 틀린 모델이 있는 것만</label></div>`;
+  if (!keys.includes(S.fl.q)) S.fl.q = keys[0];
+  const members = G.get(S.fl.q);
+  if (S.sel == null || !members.includes(S.sel)) S.sel = members.find(anyWrong) ?? members[0];
+  S.base = S.sel;
+  const i = S.sel, t = TREE[treeOf(src)], cd = candOf(i), gold = TX.gold[i];
+  const head = src === 'dna' ? short(TX.ctx[members[0]], 90) : short(TX.text[members[0]], 90);
+  const opts = keys.slice(0, 400).map(k => { const m0 = G.get(k)[0], lab = src === 'dna' ? TX.ctx[m0] : TX.text[m0];
+    return `<option value="${esc(k)}" ${k === S.fl.q ? 'selected' : ''}>${esc(short(lab, 80))}</option>`; }).join('');
+  // ① 응답 카드
+  const cards = members.map(j => {
+    const harmful = TX.y[j] === 1, wrong = anyWrong(j);
+    return `<button class="rcard ${j === i ? 'on' : ''}" data-i="${j}" type="button">
+      <div class="rhead"><b>${esc(TX.resp[j] || SRCNAME[src])}</b> ${label(TX.y[j])} ${wrong ? '<span class="chip bad">틀린 모델 있음</span>' : '<span class="chip ok">모두 맞음</span>'}</div>
+      <div class="rtext ${harmful ? 'blur' : ''}">${esc(short(TX.text[j], 220))}</div>
+      <div class="rbars">${MODELS.map(m => { const p = pOf(m, S.cond, j); return p == null ? '' : `<div class="rbar${isFocus(m) ? ' focus' : ''}"><span>${MNAME[m]}</span>${probBar(p, thrOf(src, m, S.cond), 90)}</div>`; }).join('')}</div>
+    </button>`; }).join('');
+  // ② 규칙 찾기
+  const tau = S.tau[treeOf(src)], sim = simOf(i);
+  const candRows = cd.map(([l, ok], k) => {
+    const pth = t.path(l).map(n => nname(n)).join(' › ');
+    return `<tr${l === gold ? ' style="outline:2px solid var(--viol)"' : ''}><td class="n">${k + 1}</td><td title="${esc(NODE.get(l).text)}">${esc(short(pth, 90))}</td><td class="n">${fmt(sim(l))}</td><td>${ok ? '<span class="chip ok">τ 통과</span>' : '<span class="chip s">τ 미달</span>'}</td>
+      ${['shieldgemma', 'team'].map(m => { const v = (D.cache[variantOf(m)] || {})[TX.id[i] + '|' + l]; return `<td>${v == null ? '<span class="hint">–</span>' : probBar(v, thrOf(src, m, 'base'), 80)}</td>`; }).join('')}</tr>`; }).join('');
+  const rs = gold ? baseSearch(i) : null;
+  // ③ 판정과 ④ 결론
+  const d = gold ? diagnoseText(i, S.p3.k) : null;
+  const missingM = MODELS.filter(m => pOf(m, S.cond, i) == null);
+  const wrongM = MODELS.filter(m => { const pr = predOf(m, S.cond, i); return pr != null && pr !== TX.y[i]; });
+  const verdict = MODELS.map(m => { const p = pOf(m, S.cond, i);
+    if (p == null) return `<tr class="${isFocus(m) ? 'focus' : ''}"><td><span class="dot" style="background:${MCOL[m]}"></span>${MNAME[m]}${m === 'team' ? ` <span class="hint">${esc(vlabel(S.team))}</span>` : ''}</td><td colspan="3"><span class="chip s">판정 없음</span> <span class="hint">이 텍스트의 ${CNAME[S.cond]} 조건 판정이 비어 있습니다</span></td></tr>`;
+    const pr = p >= thrOf(src, m, S.cond) ? 1 : 0, ok = pr === TX.y[i], dm = S.cond === 'base' && d && d[m], dg = degen(src, m, S.cond);
+    return `<tr class="${isFocus(m) ? 'focus' : ''}"><td><span class="dot" style="background:${MCOL[m]}"></span>${MNAME[m]}${m === 'team' ? ` <span class="hint">${esc(vlabel(S.team))}</span>` : ''}</td><td>${probBar(p, thrOf(src, m, S.cond))}</td><td>${pr ? '위반' : '정상'}${dg != null ? ` <span class="chip bad" title="임계값 ${fmt(thrOf(src, m, S.cond), 5)}: dev 텍스트의 ${pct(dg)}를 위반으로 판정">임계값 무너짐</span>` : ''}</td><td>${ok ? '<span class="chip ok">맞음</span>' : `<span class="chip bad">틀림</span>${dm ? ` <span class="dot" style="background:${CCOL[dm.c]}"></span>${CAUSES[dm.c]}` : ''}`}</td></tr>`; }).join('');
+  const why = d ? Object.entries(d).filter(([, v]) => v).map(([m, v]) => `<li><b>${MNAME[m]}</b>: ${CAUSES[v.c]} — ${esc(v.why)}</li>`).join('') : '';
+  return `<div class="card"><h2>텍스트 하나가 판정되기까지</h2>
+    <p class="q">질문(또는 댓글·대화)을 고르면, 응답마다 판정 모델이 어떻게 판단했고 어떤 규칙을 찾아 그렇게 판단했는지, 틀렸다면 왜인지 순서대로 보여 줍니다.</p>
+    <div class="row"><label class="slider">데이터 <select id="flsrc">${['dna', 'jigsaw', 'prosocial'].filter(x => flowGroups(x).size).map(x => `<option value="${x}" ${x === src ? 'selected' : ''}>${SRCNAME[x]}</option>`).join('')}</select></label>
+      <label class="slider">${src === 'dna' ? '질문' : '텍스트'} <select id="flq" style="max-width:520px">${opts}</select></label>
+      <button id="flrand" type="button">무작위로 고르기</button>
+      <label class="slider"><input type="checkbox" id="flwrong" ${S.fl.onlyWrong ? 'checked' : ''}> 틀린 모델이 있는 것만</label></div>
+    <details class="gloss"><summary>용어 설명</summary><dl>
+      <dt>위반 확률</dt><dd>판정 모델이 "규칙을 어겼다"고 볼 확률(0~1). 임계값(세로선) 이상이면 위반으로 판정합니다.</dd>
+      <dt>임계값</dt><dd>dev 데이터에서 F1이 가장 높아지는 값으로 정했습니다 (공식 기준).</dd>
+      <dt>규칙 찾기 · τ</dt><dd>텍스트와 규칙 문장의 유사도로 규칙 트리를 위에서 아래로 내려가며 후보를 찾습니다. 유사도가 τ보다 낮은 가지는 버립니다.</dd>
+      <dt>기본 조건</dt><dd>유사도 상위 5개 규칙으로 각각 판정해, τ를 넘은 규칙 중 가장 높은 위반 확률을 씁니다 (넘은 규칙이 없으면 1위 규칙).</dd>
+      <dt>Llama Guard · Qwen3Guard</dt><dd>규칙 문장을 받지 않고 자체 기준으로 판정하는 비교용 모델입니다.</dd>
+    </dl></details></div>
+  ${src === 'dna' ? `<div class="card"><h2><span class="step">1</span>응답 LLM 6개의 응답과 판정</h2>
+    <p class="q">질문과 고른 응답의 전문은 오른쪽 '원문 보기'에 있습니다. 카드를 누르면 아래 단계가 그 응답으로 바뀝니다. 막대 = 위반 확률(${CNAME[S.cond]} 조건), 세로선 = 임계값. 굵게 = 위에서 고른 판정 모델.</p>
+    <div class="rgrid">${cards}</div></div>` : ''}
+  <div class="card"><h2><span class="step">${src === 'dna' ? 2 : 1}</span>규칙 찾기: 어떤 규칙으로 판단했나</h2>${src === 'dna' ? '' : '<p class="hint">판정할 텍스트와 앞선 대화는 오른쪽 \'원문 보기\'에 있습니다.</p>'}
+    <p class="q">${gold ? `정답 규칙: <b>${esc(nname(gold))}</b> · 찾은 1위 ${rs && rs.ok1 ? '<span class="chip ok">정답과 같음</span>' : `<span class="chip bad">정답과 다름</span> (처음 갈라진 단계 ${rs ? rs.div : '–'})`}` : '정답 규칙이 없는 데이터라 규칙 트리에서 찾은 규칙만 씁니다.'} · τ = ${fmt(tau)}${tauChanged(treeOf(src)) ? ` <span class="chip bad">바꾼 값</span> <span class="hint">원래 ${fmt(D.meta.tau[treeOf(src)])}</span>` : ''}</p>
+    <div style="overflow-x:auto"><table><tr><th class="n">순위</th><th>후보 규칙 (대분류 › 중분류 › 소분류)</th><th class="n">유사도</th><th>BFS</th><th>ShieldGemma</th><th>팀 판정기</th></tr>${candRows}</table></div>
+    <p class="hint">${S.cond === 'base' ? '' : '이 표는 \'기본\' 조건의 후보별 판정입니다. '}기본 조건의 최종 확률 = τ를 통과한 후보 중 가장 높은 값. 빨간 테두리 = 정답 규칙. <button class="link" data-goto="p1" type="button">트리에서 자세히 보기 (P1)</button></p></div>
+  <div class="card"><h2><span class="step">${src === 'dna' ? 3 : 2}</span>판정 결과${gold ? '와 틀린 이유' : ''} <span class="hint">(${CNAME[S.cond]} 조건)</span></h2>
+    <table>${verdict}</table>
+    ${S.cond !== 'base' && gold ? '<p class="hint">틀린 이유(원인 규칙 1–4)는 실제 시스템이 쓰는 \'기본\' 조건 판정으로 정합니다.</p>' : ''}
+    ${flowWhy(gold, why, wrongM, missingM, i)}</div>`;
+}
+function flowWhy(gold, why, wrongM, missingM, i) {
+  // 틀린 이유 문구: '모두 맞음'과 '판정이 빠져 진단할 수 없음'을 구분
+  const links = '<p class="hint"><button class="link" data-goto="p3" type="button">비슷한 오판 모아 보기 (P3)</button> · <button class="link" data-goto="p4" type="button">규칙 문장 고쳐 보기 (P4)</button></p>';
+  const missBase = MODELS.filter(m => pOf(m, 'base', i) == null || (!RULE_FREE.has(m) && pOf(m, 'rule_only', i) == null));
+  const missNote = ms => ms.map(m => m === 'team' ? `팀 판정기(${esc(S.team)})` : MNAME[m]).join(', ');
+  let h = '';
+  const dgM = MODELS.filter(m => pOf(m, S.cond, i) != null && degen(TX.src[i], m, S.cond) != null);
+  if (dgM.length) h += `<div class="warn"><b>임계값 무너짐</b>: ${missNote(dgM)}의 임계값이 dev 텍스트의 95% 이상을 한쪽(대부분 위반)으로 판정하는 값입니다 (dev F1 최대가 '거의 전부 위반'에서 나옴). 이 모델들의 맞음/틀림은 판단력보다 임계값 탓이라 의미가 약하니, 확률 막대 길이(soft 예측)와 ROC-AUC로 보세요. 상단 <b>임계값 기준</b>을 κ로 바꾸면 비교용으로 다시 계산됩니다.</div>`;
+  if (missingM.length) h += `<div class="warn">${missNote(missingM)}의 판정이 비어 있습니다. 후보 규칙 판정이 덜 끝났거나 이 변형을 아직 판정하지 않은 것입니다. <span class="mono">python scripts\\spark_conditions.py</span>를 다시 실행하면 빠진 것만 채웁니다.</div>`;
+  if (!gold) return h + (wrongM.length ? '' : (missingM.length ? '' : '<p class="hint">모든 모델이 맞게 판정했습니다. </p>')) + '<p class="hint">원인 진단은 정답 규칙이 있는 Do-Not-Answer·Jigsaw만 합니다.</p>';
+  if (why) return h + `<h3>틀린 이유 (원인 규칙 1–4)</h3><ul>${why}</ul>` + links;
+  if (!wrongM.length) return h + (missingM.length ? '<p class="hint">판정이 있는 모델은 모두 맞게 판정했습니다.</p>' : '<p class="hint">모든 모델이 맞게 판정했습니다.</p>');
+  if (S.cond !== 'base') return h + `<p class="hint">${CNAME[S.cond]} 조건에서 ${wrongM.map(m => MNAME[m]).join(', ')}이(가) 틀렸습니다. 원인 진단은 '기본' 조건 판정으로 하므로 위 '판정 조건'을 기본으로 바꾸면 보입니다.</p>`;
+  return h + `<h3>틀린 이유</h3><p>${wrongM.map(m => MNAME[m]).join(', ')}이(가) 틀렸지만, 원인 규칙 1–4는 네 모델의 '기본'·'규칙 문장만' 판정이 모두 있어야 정할 수 있습니다 (규칙 2 "모든 모델이 같은 답"). 빠진 판정: ${missNote(missBase)}.</p>`;
+}
+function bindFlow() {                           // 그려진 컨트롤에만 연결 (텍스트가 없으면 일부만 그려짐)
+  const on = (id, ev, fn) => { const el = $(id); if (el) el[ev] = fn; };
+  on('flsrc', 'onchange', e => { const v = e.target.value; S.fl.src = v;      // 따라가기 데이터 = 위 출처 필터 (P1~P4도 같이)
+    if (S.f.src !== 'all' && S.f.src !== v) { S.f.src = v; $('fSrc').value = v; S.f.rule = 'all'; fillRuleFilter(); }
+    if (TREE[treeOf(v)]) setTree(treeOf(v), false);
+    S.fl.q = null; S.sel = null; render(); });
+  on('flq', 'onchange', e => { S.fl.q = e.target.value; S.sel = null; render(); });
+  on('flwrong', 'onchange', e => { S.fl.onlyWrong = e.target.checked; S.fl.q = null; S.sel = null; render(); });
+  on('flrand', 'onclick', () => { const ks = [...flowGroups(S.fl.src).keys()].filter(k => !S.fl.onlyWrong || flowGroups(S.fl.src).get(k).some(anyWrong));
+    S.fl.q = ks[Math.floor(Math.random() * ks.length)]; S.sel = null; render(); });
+}
+document.addEventListener('click', e => { const g = e.target.closest('[data-goto]'); if (g) { S.tab = g.dataset.goto; try { localStorage.setItem('sys_tab', S.tab); } catch (er) {} if (S.sel != null && TREE[treeOf(TX.src[S.sel])]) setTree(treeOf(TX.src[S.sel]), false); render(); window.scrollTo(0, 0); } });
+>>>>>>> Stashed changes
 // ======================================================================= P1 규칙 찾기
 const P1C = new Map();
 function p1Results(src) {
-  const tau = S.p1.tau[src], key = [src, tau, S.p1.start, JSON.stringify(S.f), S.cond, S.thrBy, S.testOpen].join('|');
+  const tau = S.tau[src], bo = boostOf(src), key = [src, tau, JSON.stringify(bo), S.p1.start, JSON.stringify(S.f), S.cond, S.thrBy, S.testOpen, JSON.stringify(S.thrOv)].join('|');
   if (P1C.has(key)) return P1C.get(key);
   const ids = filtered().filter(i => TX.src[i] === src && TREE[src].rowOf.has(i) && TX.gold[i]);
   const res = new Map();
   for (const i of ids) {
-    const r = searchOne(i, tau, S.p1.start);
-    const lo = bfs(src, simOf(i), tau - DELTA, S.p1.start).leaves[0], hi = bfs(src, simOf(i), tau + DELTA, S.p1.start).leaves[0];
+    const r = searchOne(i, tau, S.p1.start, {boost: bo});
+    const lo = bfs(src, simOf(i), tau - DELTA, S.p1.start, null, bo).leaves[0], hi = bfs(src, simOf(i), tau + DELTA, S.p1.start, null, bo).leaves[0];
     r.boundary = lo !== r.top1 || hi !== r.top1;
     res.set(i, r);
   }
   const out = {ids, res}; P1C.clear(); P1C.set(key, out); return out;
 }
 function renderP1() {
-  const src = (S.f.src === 'dna' || S.f.src === 'jigsaw') ? S.f.src : S.p1.src, t = TREE[src];
+  const src = TREE[treeOf(S.f.src)] ? treeOf(S.f.src) : S.p1.src, t = TREE[src];     // 출처 필터 → 그 트리
   if (!t || !t.rowOf) return '<div class="card">유사도 데이터가 없습니다.</div>';
-  const {ids, res} = p1Results(src), tau = S.p1.tau[src];
+  const {ids, res} = p1Results(src), tau = S.tau[src];
   const R = ids.map(i => res.get(i)), n = R.length, mean = f => n ? R.reduce((a, r) => a + f(r), 0) / n : NaN;
-  const sel = S.sel != null && res.has(S.sel) ? S.sel : null, sr = sel != null ? res.get(sel) : null;
+  // 고른 텍스트가 이 트리의 텍스트면 트리에 그림. 정답 규칙이 없는 ProsocialDialog도 그리되 지표에는 넣지 않음
+  const sel = S.sel != null && treeOf(TX.src[S.sel]) === src && t.rowOf.has(S.sel) ? S.sel : null;
+  const sr = sel == null ? null : (res.get(sel) || searchOne(sel, tau, S.p1.start, {boost: boostOf(src)}));   // 목록과 같은 τ·우선순위
   const bnd = ids.filter(i => res.get(i).boundary).sort((a, b) => Math.abs(res.get(a).sc(res.get(a).top1) - tau) - Math.abs(res.get(b).sc(res.get(b).top1) - tau));
   const wrong = ids.filter(i => !res.get(i).ok1);
   const tmin = src === 'dna' ? 0 : -0.15, tmax = src === 'dna' ? 0.5 : 0.35;
@@ -424,22 +694,24 @@ function renderP1() {
       ${S.p1.mode === 'agg' ? `<label class="slider">k <select id="p1k"><option ${S.p1.k === 1 ? 'selected' : ''}>1</option><option ${S.p1.k === 3 ? 'selected' : ''}>3</option></select></label>` : ''}
     </div>
     <div class="kpis" style="margin-top:10px">
-      <div class="kpi"><b>${pct(mean(r => r.ok1))}</b><span>top-1 정확도 (${src === 'dna' ? '소분류' : '규칙'})</span></div>
-      <div class="kpi"><b>${pct(mean(r => r.ok3))}</b><span>top-3 정확도</span></div>
+      <div class="kpi"><b>${pct(mean(r => r.ok1))}</b><span>${src === 'dna' ? '소분류' : '규칙'} top-1</span></div>
+      <div class="kpi"><b>${pct(mean(r => r.ok3))}</b><span>${src === 'dna' ? '소분류' : '규칙'} top-3</span></div>
       ${src === 'dna' ? `<div class="kpi"><b>${pct(mean(r => r.l2rank === 1))}</b><span>중분류 top-1</span></div><div class="kpi"><b>${pct(mean(r => r.l2rank && r.l2rank <= 3))}</b><span>중분류 top-3</span></div>` : ''}
       <div class="kpi"><b>${pct(mean(r => r.eff))}</b><span>규칙 찾기 효율 (비교 노드 ÷ 전체 ${t.ids.length})</span></div>
       <div class="kpi"><b>${bnd.length}</b><span>경계 사례 (τ±${DELTA}에 1위가 바뀜)</span></div>
       <div class="kpi"><b>${n.toLocaleString()}</b><span>텍스트 (필터 적용)</span></div>
     </div>
     ${p1Tree(src, sr, res, ids)}
-    <div class="legend">${S.p1.mode === 'sim' ? `<span><span class="dot" style="background:rgba(var(--cool),.85)"></span>유사도 높음</span><span>흐린 노드 = BFS가 비교하지 않음</span><span><b style="color:var(--viol)">빨간 테두리</b> = 정답 경로</span><span><b>검은 테두리</b> = 찾은 1위 경로</span><span><b>굵은 숫자</b> = τ 이상(남김)</span>` : `<span><span class="dot" style="background:rgba(var(--heat),.8)"></span>정확도 낮음 = 자주 틀리는 가지</span><span>흐린 노드 = 정답 텍스트 ${MIN_N}건 미만</span>`}</div>
-    ${sr ? `<p><b>${esc(TX.id[sel])}</b>: 찾은 규칙 ${sr.leaves.slice(0, 5).map((l, k) => `${k + 1}. ${esc(short(nname(l), 40))} (${fmt(sr.sc(l))})`).join(' · ')}<br>정답 ${esc(nname(sr.gold))} (${fmt(sr.sc(sr.gold))}, 순위 ${sr.goldRank ?? '없음'}) · 처음 갈라진 단계 <b>${sr.div}</b> · BFS가 정답을 잘라 낸 단계 <b>${sr.lost}</b> · 비교 노드 ${sr.ncmp}개${sr.fb ? ' · τ를 넘는 노드가 없어 1위만 남긴 단계 있음' : ''}</p>` : '<p class="hint">아래 목록이나 다른 뷰에서 텍스트를 고르면 트리 위에 단계별 유사도, BFS 경로, 정답 경로가 겹쳐 보입니다.</p>'}
+    <div class="legend">${S.p1.mode === 'sim' ? `<span><span class="dot" style="background:rgba(var(--cool),.85)"></span>유사도 높음</span><span><b>✓ 파란 칸</b> = τ 이상이라 남김 (진할수록 유사도 높음)</span><span><b>↳</b> = 모두 τ 미만이라 1위만 대신 남김</span><span><s>회색 칸·취소선</s> = 비교했지만 τ 미만이라 잘림</span><span>흐린 칸 = 위에서 잘려 비교하지 않음</span><span><b style="color:var(--viol)">빨간 테두리</b> = 정답 경로</span><span><b>검은 테두리</b> = 찾은 1위 경로</span>` : `<span><span class="dot" style="background:rgba(var(--heat),.8)"></span>정확도 낮음 = 자주 틀리는 가지</span><span>흐린 노드 = 정답 텍스트 ${MIN_N}건 미만</span>`}</div>
+    ${sr && S.base != null && S.base !== sel ? `<p class="warn" style="margin:6px 0">트리는 목록에서 고른 <b>${esc(TX.id[sel])}</b> 기준입니다. 따라가기에서 보던 텍스트는 <b>${esc(TX.id[S.base])}</b> → 오른쪽 '원문 보기'의 <b>따라가기 텍스트로</b> 버튼으로 돌아갈 수 있습니다.</p>` : ''}
+    ${sr ? `<p><b>${esc(TX.id[sel])}</b>: 찾은 규칙 ${sr.leaves.slice(0, 5).map((l, k) => `${k + 1}. ${esc(short(nname(l), 40))} (${fmt(sr.sc(l))})`).join(' · ')}<br>${sr.gold ? `정답 ${esc(nname(sr.gold))} (${fmt(sr.sc(sr.gold))}, 순위 ${sr.goldRank ?? '없음'}) · 처음 갈라진 단계 <b>${sr.div}</b> · BFS가 정답을 잘라 낸 단계 <b>${sr.lost}</b>` : `${SRCNAME[TX.src[sel]]} 텍스트라 정답 규칙이 없습니다 (위 지표에는 넣지 않음)`} · 비교 노드 ${sr.ncmp}개${sr.fb ? ' · τ를 넘는 노드가 없어 1위만 남긴 단계 있음' : ''}${sr.boundary ? ` · <span class="chip bad">경계 사례</span> τ를 ±${DELTA}만 바꿔도 이 텍스트의 1위가 바뀜` : ''}</p>` : '<p class="hint">아래 목록이나 다른 뷰에서 텍스트를 고르면 트리 위에 단계별 유사도, BFS 경로, 정답 경로가 겹쳐 보입니다.</p>'}
   </div>`;
+  if (S.p1.node && !(S.p1.node in t.level)) S.p1.node = null;      // 다른 트리의 노드면 무시
   if (S.p1.node) h += p1NodeCard(src, S.p1.node, res, ids);
-  h += `<div class="row"><div class="card grow"><h2>경계 사례 ${bnd.length}건</h2><p class="q">1위 규칙의 유사도가 τ에 가까운 순</p>${textRows(bnd, [
+  h += `<div class="row"><div class="card grow"><h2>경계 사례 ${bnd.length}건 <span class="hint">(필터에 해당하는 전체 텍스트 중)</span></h2><p class="q">τ를 ±${DELTA}만 바꿔도 1위가 바뀌는 텍스트 · τ에 가까운 순 · 행을 누르면 그 텍스트로 바뀜</p>${textRows(bnd, [
       {h: 'text_id', f: i => esc(TX.id[i])}, {h: '1위', f: i => esc(short(nname(res.get(i).top1), 28))},
       {h: '유사도', n: 1, f: i => fmt(res.get(i).sc(res.get(i).top1))}, {h: '정답?', f: i => res.get(i).ok1 ? '<span class="chip ok">맞음</span>' : '<span class="chip bad">틀림</span>'}])}</div>
-    <div class="card grow"><h2>1위가 틀린 텍스트 ${wrong.length}건</h2>${textRows(wrong, [
+    <div class="card grow"><h2>1위가 틀린 텍스트 ${wrong.length}건 <span class="hint">(필터에 해당하는 전체 텍스트 중)</span></h2>${textRows(wrong, [
       {h: 'text_id', f: i => esc(TX.id[i])}, {h: '갈라진 단계', f: i => res.get(i).div}, {h: '정답 순위', n: 1, f: i => res.get(i).goldRank ?? '없음'},
       {h: '정답', f: i => esc(short(nname(TX.gold[i]), 26))}])}</div></div>`;
   return h;
@@ -459,7 +731,7 @@ function p1Tree(src, sr, res, ids) {
   }
   let lo = Infinity, hi = -Infinity;
   if (sr && S.p1.mode === 'sim') for (const n of t.ids) { const v = sr.sc(n); lo = Math.min(lo, v); hi = Math.max(hi, v); }
-  const tau = S.p1.tau[src];
+  const tau = S.tau[src];
   let g = '';
   for (const id of t.ids) {
     const l = t.level[id] - 1, x = x0[l], w = colW[l] - 3, yy = y0[id], hgt = hh[id] - 2;
@@ -470,10 +742,14 @@ function p1Tree(src, sr, res, ids) {
       if (a) { const acc = a[0] / a[1]; fill = `rgba(var(--heat),${(0.1 + 0.75 * (1 - acc)).toFixed(2)})`; op = a[1] < MIN_N ? 0.4 : 1; val = `${Math.round(acc * 100)}% (${a[1]})`; }
       else op = 0.35;
     } else if (sr) {
-      const v = sr.sc(id), a = hi > lo ? (v - lo) / (hi - lo) : 0.5;
-      fill = `rgba(var(--cool),${(0.08 + 0.8 * a).toFixed(2)})`;
-      op = sr.compared.has(id) ? 1 : 0.28;
-      val = (v >= tau && sr.compared.has(id) ? '<tspan font-weight="700">' : '<tspan>') + v.toFixed(3) + '</tspan>';
+      // 노드 상태: 남김(τ 이상) · 대신 남김(모두 τ 미만이라 1위만) · 잘림(비교했지만 τ 미만) · 비교 안 함
+      const v = sr.sc(id), a = hi > lo ? (v - lo) / (hi - lo) : 0.5, lv = t.level[id];
+      const cmp = sr.compared.has(id), keptSet = sr.kept[lv], kept = cmp && (keptSet ? keptSet.has(id) : v >= tau);
+      if (!cmp) { fill = 'var(--sunk)'; op = 0.28; val = `<tspan>${v.toFixed(3)}</tspan>`; }
+      else if (kept) {
+        fill = `rgba(var(--cool),${(0.15 + 0.75 * a).toFixed(2)})`;
+        val = v >= tau ? `<tspan font-weight="700">✓ ${v.toFixed(3)}</tspan>` : `<tspan font-weight="700">↳ ${v.toFixed(3)}</tspan>`;
+      } else { fill = 'var(--sunk)'; op = 0.75; val = `<tspan text-decoration="line-through">${v.toFixed(3)}</tspan>`; }
     }
     const stroke = goldP && goldP.has(id) ? 'var(--viol)' : topP && topP.has(id) ? 'var(--ink)' : 'none';
     const sw = goldP && goldP.has(id) ? 2.5 : 2;
@@ -498,11 +774,12 @@ function p1NodeCard(src, id, res, ids) {
       {h: 'text_id', f: i => esc(TX.id[i])}, {h: '정답', f: i => esc(short(nname(TX.gold[i]), 26))}, {h: '', f: i => res.get(i).ok1 ? '<span class="chip ok">맞음</span>' : '<span class="chip bad">틀림</span>'}], 40)}</div></div></div>`;
 }
 function bindP1() {
-  const src = (S.f.src === 'dna' || S.f.src === 'jigsaw') ? S.f.src : S.p1.src;
-  $('p1src').onchange = e => { S.p1.src = e.target.value; S.p1.node = null; render(); };
+  const src = TREE[treeOf(S.f.src)] ? treeOf(S.f.src) : S.p1.src;
+  $('p1src').onchange = e => {                     // 트리를 직접 바꾸면 출처 필터도 맞춤 (다르면 필터가 이김)
+    setTree(e.target.value); render(); };
   const tau = $('p1tau'); tau.oninput = e => { tau.nextElementSibling.textContent = (+e.target.value).toFixed(3); };
-  tau.onchange = e => { S.p1.tau[src] = +e.target.value; render(); };
-  $('p1reset').onclick = () => { S.p1.tau[src] = D.meta.tau[src]; render(); };
+  tau.onchange = e => { setTau(src, +e.target.value); render(); };      // P4·따라가기·P2·P3에도 같은 τ
+  $('p1reset').onclick = () => { setTau(src, D.meta.tau[src]); render(); };
   $('p1start').onchange = e => { S.p1.start = +e.target.value; render(); };
   $('p1mode').onchange = e => { S.p1.mode = e.target.value; render(); };
   if ($('p1k')) $('p1k').onchange = e => { S.p1.k = +e.target.value; render(); };
@@ -571,6 +848,41 @@ function renderP2() {
     <label class="slider">y <select id="p2b">${MODELS.map(m => `<option value="${m}" ${m === S.p2.b ? 'selected' : ''}>${MNAME[m]}</option>`).join('')}</select></label></div>
     ${p2Scatter(ids)}</div>`;
 }
+<<<<<<< Updated upstream
+=======
+const VCOL = ['#0B7285', '#C05621', '#6B46C1', '#2F855A', '#B7791F', '#B4233C', '#2B6CB0', '#7D8896'];
+function expPanel() {                            // 팀 판정기 실험: 변형마다 무엇을·왜 바꿨는지 + dev 지표 + 임계값별 F1
+  const src = ['dna', 'jigsaw', 'prosocial'].includes(S.f.src) ? S.f.src : 'dna', cond = S.cond;
+  const vs = ['shieldgemma', ...D.meta.variants.filter(v => v !== 'team_v0')];
+  const ids = []; for (let i = 0; i < N; i++) if (TX.src[i] === src && TX.split[i] === 'dev' && TX.judged[i]) ids.push(i);
+  const rows = [], curves = [];
+  const grid = []; for (let k = 0; k <= 60; k++) grid.push(Math.pow(10, -3 + 3 * k / 60));
+  vs.forEach((v, n) => {
+    const arr = (D.judg[v] || {})[cond]; if (!arr) return;
+    const p = [], y = []; for (const i of ids) if (arr[i] != null) { p.push(arr[i]); y.push(TX.y[i]); }
+    if (!p.length) return;
+    const thr = bestThr(p, y, S.thrBy), m = metrics(p, y, thr);
+    rows.push({v, m, thr, col: VCOL[n % VCOL.length]});
+    curves.push({v, col: VCOL[n % VCOL.length], pts: grid.map(t => [t, metrics(p, y, t).f1])});
+  });
+  if (!rows.length) return '';
+  const info = v => v === 'shieldgemma' ? {what: '기준 ShieldGemma (공식 프롬프트 형식 + 찾은 규칙 문장)', why: '비교 기준'} : (D.meta.variant_info || {})[v] || {what: v, why: ''};
+  const tab = `<table><tr><th>변형</th><th>무엇을 바꿨나</th><th>왜</th><th class="n">ROC-AUC</th><th class="n">PR-AUC</th><th class="n">F1</th><th class="n">임계값</th></tr>${rows.map(r =>
+    `<tr><td><span class="dot" style="background:${r.col}"></span>${esc(r.v)}</td><td>${esc(info(r.v).what)}</td><td class="hint">${esc(info(r.v).why)}</td><td class="n">${fmt(r.m.auc)}</td><td class="n">${fmt(r.m.ap)}</td><td class="n">${fmt(r.m.f1)}</td><td class="n">${fmt(r.thr, 4)}</td></tr>`).join('')}</table>`;
+  const W = 560, H = 230, L = 40, B = 30, X = t => L + (Math.log10(t) + 3) / 3 * (W - L - 10), Y = f => 10 + (1 - f) * (H - B - 10);
+  let g = `<rect x="${L}" y="10" width="${W - L - 10}" height="${H - B - 10}" fill="var(--sunk)"/>`;
+  for (const t of [0.001, 0.01, 0.1, 1]) g += `<line x1="${X(t)}" y1="10" x2="${X(t)}" y2="${H - B}" stroke="var(--line)"/><text x="${X(t)}" y="${H - B + 14}" font-size="10.5" text-anchor="middle" fill="var(--muted)">${t}</text>`;
+  for (const f of [0, 0.25, 0.5, 0.75, 1]) g += `<text x="${L - 4}" y="${Y(f) + 3}" font-size="10.5" text-anchor="end" fill="var(--muted)">${f}</text>`;
+  for (const c of curves) g += `<polyline fill="none" stroke="${c.col}" stroke-width="2" points="${c.pts.map(([t, f]) => `${X(t).toFixed(1)},${Y(f).toFixed(1)}`).join(' ')}"><title>${esc(c.v)}</title></polyline>`;
+  g += `<text x="${(L + W) / 2}" y="${H - 2}" font-size="11" text-anchor="middle" fill="var(--ink)">임계값 (로그 눈금)</text><text transform="translate(11 ${H / 2 - 10}) rotate(-90)" font-size="11" text-anchor="middle" fill="var(--ink)">F1</text>`;
+  return `<div class="card"><h2>팀 판정기 실험 (${SRCNAME[src]} dev, ${CNAME[cond]} 조건)</h2>
+    <p class="q">기준 ShieldGemma와 같은 모델·같은 설정에서 프롬프트만 바꿨습니다. 공식 필수 변형은 ① 규칙 문장만, ② 규칙 문장 + 예시, ③ 팀이 고친 규칙 문장입니다. 주 지표는 임계값과 상관없는 ROC-AUC·PR-AUC입니다.</p>
+    <div style="overflow-x:auto">${tab}</div>
+    <h3>임계값에 따른 F1</h3><svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:${W}px">${g}</svg>
+    <div class="legend">${curves.map(c => `<span><span class="dot" style="background:${c.col}"></span>${esc(c.v)}</span>`).join('')}</div>
+    <p class="hint">곡선이 높고 넓을수록 임계값을 조금 바꿔도 F1이 안정적입니다. 위 필터의 출처·판정 조건을 바꾸면 다시 그립니다.</p></div>`;
+}
+>>>>>>> Stashed changes
 function p2Scatter(ids) {
   const a = S.p2.a, b = S.p2.b, W = 420, Hh = 420, m = 36, sz = W - m - 10;
   const pts = ids.map(i => [i, pOf(a, S.cond, i), pOf(b, S.cond, i)]).filter(d => d[1] != null && d[2] != null);
@@ -586,7 +898,7 @@ function p2Scatter(ids) {
 function bindP2() {
   $('p2group').value = S.p2.group; $('p2group').onchange = e => { S.p2.group = e.target.value; S.p2.cell = null; render(); };
   $('p2a').onchange = e => { S.p2.a = e.target.value; render(); };
-  $('p2b').onchange = e => { S.p2.b = e.target.value; render(); };
+  $('p2b').onchange = e => { setModel(e.target.value); render(); };      // y축 모델 = 위 '판정 모델'
   document.querySelectorAll('[data-cell]').forEach(td => td.onclick = () => { const [g, m] = td.dataset.cell.split('|'); S.p2.cell = {g, m}; render(); });
   if ($('p2close')) $('p2close').onclick = () => { S.p2.cell = null; render(); };
 }
@@ -662,7 +974,7 @@ function renderP3() {
   return `<div class="card"><h2>P3 잘못된 판정 진단</h2><p class="q">잘못된 판정은 규칙 찾기, 규칙 문장, 판정 모델, 사람 라벨 중 어디서 왔나? (대상: Do-Not-Answer, Jigsaw)</p>
     <div class="row"><label class="slider">진단할 모델 <select id="p3m">${MODELS.map(mm => `<option value="${mm}" ${mm === m ? 'selected' : ''}>${MNAME[mm]}</option>`).join('')}</select></label>
     <label class="slider">'규칙 찾기 문제'로 볼 상위 k <input type="range" id="p3k" min="1" max="10" step="1" value="${k}"><b>${k}</b></label>
-    <span class="hint">'기본' 조건 판정 기준 · 임계값 dev ${S.thrBy === 'kappa' ? 'κ' : 'F1'} 최대</span></div>
+    <span class="hint">'기본' 조건 판정 기준${S.cond !== 'base' ? ' (원인 진단은 실제 시스템 판정으로 하므로 위 \'판정 조건\'과 상관없음)' : ''} · 임계값 dev ${S.thrBy === 'kappa' ? 'κ' : 'F1'} 최대</span></div>
     <div class="row" style="margin-top:10px"><div style="flex:1 1 ${W}px;min-width:0"><svg viewBox="0 0 ${W} ${Hh}" width="100%" style="max-width:${W}px;touch-action:none" id="p3map">${g}</svg>
       <div class="legend">${[1, 2, 3, 4].map(c => `<span><span class="dot" style="background:${CCOL[c]}"></span>${CAUSES[c]}</span>`).join('')}<span>회색 = 맞은 판정</span><span>노란 테두리 = 모든 모델이 틀림</span><span>드래그해 영역 선택, 점을 누르면 진단</span></div></div>
     <div style="flex:0 1 280px"><h3 style="margin-top:0">${MNAME[m]}의 잘못된 판정 ${tot}건</h3><svg viewBox="0 0 280 140" width="280" id="p3bars">${bars}</svg><p class="hint">막대를 누르면 그 원인만 강조</p></div></div></div>
@@ -696,7 +1008,7 @@ function p3Popup(i) {
   $('mclose').onclick = () => $('modal').classList.remove('on');
 }
 function bindP3() {
-  $('p3m').onchange = e => { S.p3.model = e.target.value; render(); };
+  $('p3m').onchange = e => { setModel(e.target.value); render(); };
   const k = $('p3k'); k.oninput = e => { k.nextElementSibling.textContent = e.target.value; }; k.onchange = e => { S.p3.k = +e.target.value; render(); };
   document.querySelectorAll('#p3bars [data-cause]').forEach(b => b.onclick = () => { const c = +b.dataset.cause; S.p3.cause = S.p3.cause === c ? null : c; render(); });
   if ($('p3clear')) $('p3clear').onclick = () => { S.p3.cause = null; S.p3.brush = null; render(); };
@@ -708,7 +1020,7 @@ function bindP3() {
   svg.addEventListener('pointerup', e => { if (!st) return; const c = toData(e);
     if (Math.abs(c[2] - st[2]) > 6 && Math.abs(c[3] - st[3]) > 6) S.p3.brush = {x0: Math.min(st[0], c[0]), x1: Math.max(st[0], c[0]), y0: Math.min(st[1], c[1]), y1: Math.max(st[1], c[1])};
     st = null; render(); });
-  svg.querySelectorAll('[data-diag]').forEach(c => c.addEventListener('click', () => { const i = +c.dataset.diag; S.sel = i; render(); p3Popup(i); }));
+  svg.querySelectorAll('[data-diag]').forEach(c => c.addEventListener('click', () => { const i = +c.dataset.diag; pushHist(i); S.sel = i; render(); p3Popup(i); }));
 }
 
 // ======================================================================= P4 수정 효과 확인
@@ -717,12 +1029,17 @@ const variantOf = m => m === 'shieldgemma' ? 'team_v0' : realModel(m);
 function p4Base(src, m, tau, boost, edit) {             // τ·우선순위·수정안을 반영한 '기본' 조건 위반 확률
   const key = [src, realModel(m), tau, boost.node, boost.v, edit ? edit.id : '', JSON.stringify(S.f), S.testOpen].join('|');
   if (P4C.has(key)) return P4C.get(key);
-  const ids = filtered({judged: true, noResult: true}).filter(i => TX.src[i] === src && pOf(m, 'base', i) != null);
-  const same = tau === D.meta.tau[src] && !boost.v && !edit, cache = D.cache[variantOf(m)] || {};
+  const ids = filtered({judged: true, noResult: true}).filter(i => TX.src[i] === src && pOrig(m, 'base', i) != null);
+  const same = Math.abs(tau - D.meta.tau[src]) < 1e-9 && !boost.v && !edit, cache = D.cache[variantOf(m)] || {};
   const out = new Map(); let missing = 0; const miss = [];
   for (const i of ids) {
+<<<<<<< Updated upstream
     if (same) { out.set(i, pOf(m, 'base', i)); continue; }
     const r = bfs(src, simOf(i, edit), tau, D.meta.start_level || 2, null, boost), ps = [];
+=======
+    if (same) { out.set(i, pOrig(m, 'base', i)); continue; }
+    const cs = candidates(treeOf(TX.src[i]), simOf(i, edit), tau, D.meta.start_level || 2, TOP, null, boost), ps = [], pass = [];
+>>>>>>> Stashed changes
     let ok = true;
     for (const leaf of r.leaves.slice(0, TOP)) {
       let v;
@@ -736,8 +1053,8 @@ function p4Base(src, m, tau, boost, edit) {             // τ·우선순위·수
 }
 function renderP4() {
   const src = S.p4.src, m = S.p4.model, t = TREE[src];
-  const thr0 = thrOf(src, m, 'base'), thr1 = S.p4.thr ?? thr0, tau0 = D.meta.tau[src], tau1 = S.p4.tau ?? tau0;
-  const boost = {node: S.p4.bnode, v: S.p4.bv};
+  const thr0 = thrOf(src, m, 'base', true), thr1 = thrOf(src, m, 'base'), tau0 = D.meta.tau[src], tau1 = S.tau[src];   // 바꾼 값 = 모든 페이지가 함께 쓰는 설정
+  const bs = S.boost[src] || {node: '', v: 0}, boost = {node: bs.node || '', v: bs.node ? bs.v : 0};
   const A = p4Base(src, m, tau0, {node: '', v: 0}, null), B = p4Base(src, m, tau1, boost, null);
   const ids = A.ids.filter(i => B.p.has(i));
   const y = ids.map(i => TX.y[i]), pa = ids.map(i => A.p.get(i)), pb = ids.map(i => B.p.get(i));
@@ -750,16 +1067,17 @@ function renderP4() {
   const flipCols = [{h: 'text_id', f: i => esc(TX.id[i])}, {h: '라벨', f: i => label(TX.y[i])}, {h: 'p 전 → 후', n: 1, f: i => `${fmt(A.p.get(i))} → ${fmt(B.p.get(i))}`}];
   const units = Object.values(TREE).flatMap(tt => tt.units);
   const unit = S.p4.unit && units.includes(S.p4.unit) ? S.p4.unit : (t.units[0]);
-  const changed = S.p4.thr != null || S.p4.tau != null || S.p4.bv;
-  return `<div class="card"><h2>P4 수정 효과 확인</h2><p class="q">임계값·τ·우선순위를 바꾸면 어떤 판정이 뒤집히고 지표는 얼마나 바뀌나? ('기본' 조건, 필터 적용)</p>
+  const changed = S.thrOv[thrKey(src, m)] != null || tauChanged(src) || !!boostOf(src);
+  return `<div class="card"><h2>P4 수정 효과 확인</h2><p class="q">임계값·τ·우선순위를 바꾸면 어떤 판정이 뒤집히고 지표는 얼마나 바뀌나? ('기본' 조건, 필터 적용${S.cond !== 'base' ? ' · 위 \'판정 조건\'과 상관없이 실제 시스템 판정인 기본 조건으로 계산' : ''})</p>
     <div class="row"><label class="slider">출처 <select id="p4src">${['dna', 'jigsaw'].filter(s => TREE[s]).map(s => `<option value="${s}" ${s === src ? 'selected' : ''}>${SRCNAME[s]}</option>`).join('')}</select></label>
     <label class="slider">모델 <select id="p4m"><option value="shieldgemma" ${m === 'shieldgemma' ? 'selected' : ''}>ShieldGemma</option><option value="team" ${m === 'team' ? 'selected' : ''}>팀 판정기 (${S.team})</option></select></label>
     <button id="p4reset" ${changed ? '' : 'disabled'}>원래 값으로 되돌리기</button></div>
+    <p class="hint">여기서 바꾼 임계값·τ·우선순위는 따라가기·P1·P2·P3·원문 보기에도 그대로 적용됩니다. τ는 P1의 τ와 같은 값입니다.</p>
     <div class="row" style="margin-top:8px">
       <label class="slider">판정 임계값 <input type="range" id="p4thr" min="0" max="1" step="0.001" value="${thr1}"><input type="number" id="p4thrn" min="0" max="1" step="0.001" value="${thr1.toFixed(4)}" style="width:80px"><span class="hint">원래 ${fmt(thr0, 4)}</span></label>
       <label class="slider">τ <input type="range" id="p4tau" min="${src === 'dna' ? 0 : -0.15}" max="${src === 'dna' ? 0.5 : 0.35}" step="0.002" value="${tau1}"><b>${tau1.toFixed(3)}</b><span class="hint">원래 ${tau0.toFixed(3)}</span></label>
-      <label class="slider">우선순위 <select id="p4bnode"><option value="">(바꾸지 않음)</option>${t.units.map(u => `<option value="${u}" ${u === S.p4.bnode ? 'selected' : ''}>${esc(short(nname(u), 40))}</option>`).join('')}</select>
-        <input type="range" id="p4bv" min="-0.1" max="0.1" step="0.005" value="${S.p4.bv}"><b>${S.p4.bv > 0 ? '+' : ''}${(+S.p4.bv).toFixed(3)}</b></label>
+      <label class="slider">우선순위 <select id="p4bnode"><option value="">(바꾸지 않음)</option>${t.units.map(u => `<option value="${u}" ${u === boost.node ? 'selected' : ''}>${esc(short(nname(u), 40))}</option>`).join('')}</select>
+        <input type="range" id="p4bv" min="-0.1" max="0.1" step="0.005" value="${bs.v || 0}"><b>${bs.v > 0 ? '+' : ''}${(+(bs.v || 0)).toFixed(3)}</b></label>
     </div>
     ${B.missing ? `<div class="warn">바꾼 설정에서 새로 상위 5개에 든 (텍스트, 규칙) 판정이 캐시에 없어 텍스트 ${B.missing}건을 계산에서 뺐습니다. ${S.server ? `<button id="p4fill">빠진 판정 ${B.miss.length}건 채우기 (서버)</button>` : '로컬 서버(serve.py)를 켜면 여기서 채울 수 있습니다.'}</div>` : ''}
     <div class="row" style="margin-top:10px"><div class="grow"><h3>원래 설정과 바꾼 설정 (${ids.length}건)</h3>${mtab}</div>
@@ -835,16 +1153,16 @@ function p4Saved() {
     ${L.map((p, k) => `<tr><td>${esc(p.time)}</td><td>${esc(short(nname(p.rule), 40))}</td><td>${esc(p.variant)}</td><td class="n">${fmt(p.metrics.base_before.auc)} → ${fmt(p.metrics.base_after.auc)}</td><td class="n">${p.metrics.fixed} / ${p.metrics.broken}</td><td><button data-del="${k}">삭제</button></td></tr>`).join('')}</table></div>`;
 }
 function bindP4() {
-  const src = S.p4.src;
-  $('p4src').onchange = e => { S.p4.src = e.target.value; S.p4.tau = null; S.p4.bnode = ''; S.p4.bv = 0; render(); };
-  $('p4m').onchange = e => { S.p4.model = e.target.value; S.p4.thr = null; render(); };
-  $('p4reset').onclick = () => { S.p4.thr = null; S.p4.tau = null; S.p4.bnode = ''; S.p4.bv = 0; render(); };
-  $('p4thr').onchange = e => { S.p4.thr = +e.target.value; render(); };
+  const src = S.p4.src, m4 = S.p4.model;
+  $('p4src').onchange = e => { setTree(e.target.value); render(); };         // 상단 출처·P1 트리도 같이
+  $('p4m').onchange = e => { setModel(e.target.value); render(); };
+  $('p4reset').onclick = () => { setThr(src, m4, null); setTau(src, D.meta.tau[src]); setBoost(src, '', 0); render(); };
+  $('p4thr').onchange = e => { setThr(src, m4, +e.target.value); render(); };
   $('p4thr').oninput = e => { $('p4thrn').value = (+e.target.value).toFixed(4); };
-  $('p4thrn').onchange = e => { S.p4.thr = Math.min(1, Math.max(0, +e.target.value)); render(); };
-  const tau = $('p4tau'); tau.oninput = e => { tau.nextElementSibling.textContent = (+e.target.value).toFixed(3); }; tau.onchange = e => { S.p4.tau = +e.target.value; render(); };
-  $('p4bnode').onchange = e => { S.p4.bnode = e.target.value; if (!e.target.value) S.p4.bv = 0; render(); };
-  const bv = $('p4bv'); bv.oninput = e => { bv.nextElementSibling.textContent = (+e.target.value).toFixed(3); }; bv.onchange = e => { S.p4.bv = S.p4.bnode ? +e.target.value : 0; render(); };
+  $('p4thrn').onchange = e => { setThr(src, m4, Math.min(1, Math.max(0, +e.target.value))); render(); };
+  const tau = $('p4tau'); tau.oninput = e => { tau.nextElementSibling.textContent = (+e.target.value).toFixed(3); }; tau.onchange = e => { setTau(src, +e.target.value); render(); };
+  $('p4bnode').onchange = e => { S.boost[src] = {node: e.target.value, v: e.target.value ? ((S.boost[src] || {}).v || 0) : 0}; settingsChanged(); render(); };
+  const bv = $('p4bv'); bv.oninput = e => { bv.nextElementSibling.textContent = (+e.target.value).toFixed(3); }; bv.onchange = e => { const nd = (S.boost[src] || {}).node || ''; setBoost(src, nd, +e.target.value); render(); };
   $('p4unit').onchange = e => { S.p4.unit = e.target.value; render(); };
   $('p4rule').onchange = e => { S.p4.rule = e.target.value; render(); };
   if ($('p4run')) $('p4run').onclick = () => rejudge(src);
@@ -875,12 +1193,12 @@ async function rejudge(src) {
   S.p4.busy = false; render();
 }
 async function fillMissing(src) {
-  const m = S.p4.model, B = p4Base(src, m, S.p4.tau ?? D.meta.tau[src], {node: S.p4.bnode, v: S.p4.bv}, null);
+  const m = S.p4.model, bs = S.boost[src] || {}, B = p4Base(src, m, S.tau[src], {node: bs.node || '', v: bs.node ? bs.v || 0 : 0}, null);
   S.p4.busy = true;
   try {
     const r = await fetch(API + '/api/judge_pairs', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({variant: variantOf(m), pairs: B.miss})});
     const j = await r.json(); if (!r.ok) throw new Error(j.error || r.statusText);
-    const c = D.cache[variantOf(m)] = D.cache[variantOf(m)] || {}; Object.assign(c, j.p); P4C.clear();
+    const c = D.cache[variantOf(m)] = D.cache[variantOf(m)] || {}; Object.assign(c, j.p); P4C.clear(); settingsChanged();   // 채운 판정을 모든 페이지에 반영
   } catch (e) { alertBox('판정 실패: ' + e.message); }
   S.p4.busy = false; render();
 }
@@ -899,10 +1217,21 @@ function render() {
   document.querySelectorAll('.tab').forEach(b => b.classList.toggle('on', b.dataset.t === S.tab));
   const main = $('main');
   try {
+<<<<<<< Updated upstream
     main.innerHTML = {p1: renderP1, p2: renderP2, p3: renderP3, p4: renderP4}[S.tab]();
     ({p1: bindP1, p2: bindP2, p3: bindP3, p4: bindP4})[S.tab]();
   } catch (e) { main.innerHTML = `<div class="card warn">그리기 오류: ${esc(e.message)}</div>`; console.error(e); }
   renderDetail();
+=======
+    main.innerHTML = {flow: renderFlow, p1: renderP1, p2: renderP2, p3: renderP3, p4: renderP4}[S.tab]();
+    ({flow: bindFlow, p1: bindP1, p2: bindP2, p3: bindP3, p4: bindP4})[S.tab]();
+  } catch (e) {                                   // 어디서 났는지 알 수 있게 첫 위치도 보여 줌
+    const at = String(e.stack || '').split('\n').slice(1, 3).map(l => l.trim().replace(/\(.*?:(\d+):(\d+)\)/, '(줄 $1)')).join(' ← ');
+    main.innerHTML = `<div class="card warn">그리기 오류: ${esc(e.message)}<br><span class="hint">${esc(at)} · 탭 ${esc(S.tab)} · 이 문구를 그대로 알려 주세요</span></div>`; console.error(e); }
+  renderDetail(); renderChanges();
+  if ($('dPrev')) $('dPrev').onclick = () => { const p = S.hist.pop(); select(p, true); };
+  if ($('dBase')) $('dBase').onclick = () => select(S.base);
+>>>>>>> Stashed changes
   $('srv').innerHTML = S.server ? '<span class="chip ok">로컬 서버 연결됨 · 다시 판정 가능</span>' : '<span class="chip s">로컬 서버 없음 · 다시 판정 꺼짐</span>';
 }
 async function ping() { try { const r = await fetch(API + '/api/health', {cache: 'no-store'}); S.server = r.ok; } catch (e) { S.server = false; } render(); }

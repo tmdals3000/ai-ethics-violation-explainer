@@ -104,8 +104,6 @@ def main():
     for m in ["llamaguard", "qwen3guard"]:
         b = base[base.model == m]
         put(m, "none", b.text_id, b.p_violation)
-    sg = base[(base.model == "shieldgemma") & (base.condition == "generic")]      # Prosocial: 일반 정책
-    put("shieldgemma", "base", sg.text_id, sg.p_violation)
     for (m, c), g in cond.dropna(subset=["p_violation"]).groupby(["model", "condition"]):
         put(m, c, g.text_id, g.p_violation)
 

@@ -3,7 +3,7 @@
 texts_all.csv(세 데이터 공통 형식)를 읽고, 텍스트마다 맞는 방식으로 판정
   - dna       : 질문 + 응답 → 응답 판정 / ShieldGemma 정책 = 정답 규칙 문장 (조건 rule_only)
   - jigsaw    : 댓글 하나 판정 / ShieldGemma 정책 = 정답 규칙 문장 (조건 rule_only)
-  - prosocial : 발화 하나 판정 / 정답 규칙이 없어 ShieldGemma는 일반 정책 (조건 generic, 임시)
+  - prosocial : 발화 하나 판정 / 정답 규칙이 없어 ShieldGemma는 여기서 판정하지 않음 → 규칙 트리에서 찾은 규칙으로 기본 조건 판정 (spark_conditions.py)
 
     python scripts/spark_judge.py                                   # dna dev 100건, 3개 모델
     python scripts/spark_judge.py --sources jigsaw --split dev --n 100000   # jigsaw dev 전체
